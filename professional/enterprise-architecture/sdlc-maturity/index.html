@@ -136,7 +136,7 @@
 
     <!-- Attribution -->
     <p style="margin-top:14px;text-align:center;font-size:11.5px;font-family:'JetBrains Mono',monospace;color:#868C97;">
-      AI-Native SDLC Maturity Model © 2026 David Facer —
+      <a href="https://github.com/superdtf-0882/ai-native-sdlc-maturity-model" target="_blank" rel="noopener noreferrer" style="color:#868C97;">AI-Native SDLC Maturity Model</a> © 2026 David Facer —
       <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" style="color:#B8924A;">CC BY 4.0</a>
     </p>
 
@@ -310,6 +310,7 @@ const DIMS = [
 ];
 
 const SCORE_MAP = { A: 1, B: 2, C: 3, D: 4, E: 5 };
+const LEVEL_META = { A: 'Initial', B: 'Managed', C: 'Defined', D: 'Quantitatively Managed', E: 'Optimising' };
 
 let scores = {};
 let selectedDim = null;
@@ -482,68 +483,74 @@ function renderProgress() {
 }
 
 function downloadMd() {
+  const scored = Object.keys(scores).length;
+  const avg = (DIMS.reduce((s, d) => s + (scores[d.id] ? SCORE_MAP[scores[d.id]] : 0), 0) / 13).toFixed(1);
   const date = new Date().toISOString().split('T')[0];
 
-  const tableRows = DIMS.map(d => {
-    const g = scores[d.id];
-    return `| ${d.id} | ${d.name} | ${g || '—'} | ${d.short} |`;
-  }).join('\n');
+  let md = '';
 
-  const gradedScores = DIMS.map(d => scores[d.id] ? SCORE_MAP[scores[d.id]] : 0);
-  const avg = (gradedScores.reduce((a, b) => a + b, 0) / 13).toFixed(1);
+  // Header
+  md += `# AI-Native SDLC Maturity Assessment\n\n`;
+  md += `**Framework:** AI-Native SDLC Maturity Model — David Facer (CC BY 4.0)\n`;
+  md += `**Model reference:** https://github.com/superdtf-0882/ai-native-sdlc-maturity-model\n`;
+  md += `**Generated:** ${date}\n\n`;
+  md += `> Each dimension is scored A (Initial) through E (Optimising). `;
+  md += `A given level is only merited when **everything** in its definition is true. `;
+  md += `Dimensions are independently scored — an organisation can be advanced in one and nascent in another. `;
+  md += `For the design principles, handoff structure, and open items behind this model, see the repository above.\n\n`;
+  md += `---\n\n`;
 
-  const defsSection = DIMS.filter(d => scores[d.id]).map(d => {
-    const g = scores[d.id];
-    return `### ${d.id} — ${d.name}\n\n**Description:** ${d.desc}\n\n**Level ${g}:** ${d.levels[g]}`;
-  }).join('\n\n---\n\n');
+  // Score table
+  md += `## Scores\n\n`;
+  md += `| Dimension | Name | Level | Label |\n`;
+  md += `|---|---|---|---|\n`;
+  DIMS.forEach(d => {
+    md += `| ${d.id} | ${d.short} | ${scores[d.id] || '—'} | ${scores[d.id] ? LEVEL_META[scores[d.id]] : '—'} |\n`;
+  });
+  md += `\n**Average score:** ${avg} / 5  (${scored} of 13 dimensions graded)\n\n`;
+  md += `---\n\n`;
 
-  const promptLines = DIMS.map(d => `> - ${d.id} ${d.short}: ${scores[d.id] || '—'}`).join('\n');
+  // Full definitions — all five levels per dimension, scored level marked
+  md += `## Full maturity definitions\n\n`;
+  md += `*All five levels shown for each dimension. Your scored level is marked with ◀.*\n\n`;
 
-  const md = `# AI-Native SDLC Maturity Assessment
+  DIMS.forEach(d => {
+    md += `### ${d.id}. ${d.name}\n\n`;
+    md += `*${d.desc}*\n\n`;
+    ['A', 'B', 'C', 'D', 'E'].forEach(lv => {
+      const marker = scores[d.id] === lv ? ' ◀ **your score**' : '';
+      md += `**Level ${lv} — ${LEVEL_META[lv]}${marker}**\n\n`;
+      md += `${d.levels[lv]}\n\n`;
+    });
+    md += `---\n\n`;
+  });
 
-Generated: ${date}
+  // AI prompt
+  md += `## AI prompt\n\n`;
+  md += `Use the following prompt with Claude, ChatGPT, or any AI assistant to generate\n`;
+  md += `an Excel or Google Sheets version of this assessment:\n\n`;
+  md += `> Create a formatted maturity assessment spreadsheet for an AI-Native SDLC evaluation.\n`;
+  md += `> Framework: AI-Native SDLC Maturity Model by David Facer (CC BY 4.0)\n`;
+  md += `> Model reference: https://github.com/superdtf-0882/ai-native-sdlc-maturity-model\n`;
+  md += `> Scores:\n`;
+  DIMS.forEach(d => { md += `> - ${d.id} ${d.short}: ${scores[d.id] || 'not graded'}\n`; });
+  md += `>\n`;
+  md += `> Build a spreadsheet with:\n`;
+  md += `> (1) a scored dimension table with A–E colour coding (green=high, amber=mid, red=low),\n`;
+  md += `> (2) a radar chart of the maturity profile,\n`;
+  md += `> (3) all five level definitions for each dimension with the scored level highlighted,\n`;
+  md += `> (4) a notes column for each dimension.\n\n`;
+  md += `---\n\n`;
 
-## Scores
+  // Attribution
+  md += `*AI-Native SDLC Maturity Model © 2026 David Facer — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)*\n`;
+  md += `*Full model: https://github.com/superdtf-0882/ai-native-sdlc-maturity-model*\n`;
 
-| Dimension | Name | Level | Label |
-|-----------|------|-------|-------|
-${tableRows}
-
-**Average score:** ${avg} / 5
-
-## Full Definitions
-
-${defsSection}
-
-## AI prompt
-
-Use the following prompt with Claude, ChatGPT, or any AI assistant to generate
-an Excel or Google Sheets version of this assessment:
-
-> Create a formatted maturity assessment spreadsheet for an AI-Native SDLC evaluation.
-> Framework: AI-Native SDLC Maturity Model by David Facer (CC BY 4.0)
-> Scores:
-${promptLines}
->
-> Build a spreadsheet with:
-> (1) a scored dimension table with A–E colour coding (green=high, amber=mid, red=low),
-> (2) a radar chart of the maturity profile,
-> (3) the full level definition for each graded dimension,
-> (4) a notes column for each dimension.
-
----
-
-AI-Native SDLC Maturity Model © 2026 David Facer — CC BY 4.0`;
-
-  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'sdlc-maturity-assessment.md';
-  document.body.appendChild(a);
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([md], { type: 'text/markdown' })),
+    download: 'sdlc-maturity-assessment.md'
+  });
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
