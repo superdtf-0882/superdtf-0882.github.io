@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI-Native SDLC Maturity Assessment — David Facer</title>
+<meta name="description" content="Self-score your organisation across 13 AI-native delivery dimensions. Download a summary for use with AI tools." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230A0C10' stroke='%23B8924A' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23B8924A'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0A0C10', panel: '#14171D', hairline: '#232730', paper: '#ECEEF1',
+          smoke: '#C9CDD3', dim: '#868C97', brass: '#B8924A', dormant: '#7A8294',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'Georgia', 'serif'],
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: radial-gradient(ellipse 80% 60% at 50% 35%, #11141A 0%, #07080B 100%); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .dim-pill {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    width: 100%; padding: 8px 10px; border-radius: 7px; font-size: 12.5px;
+    cursor: pointer; border: 1px solid transparent; text-align: left;
+    font-family: 'Inter', system-ui, sans-serif; background: transparent;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    color: #3D4450;
+  }
+  .dim-pill:hover { background: #ECEEF0; }
+  .dim-pill.is-selected { border-color: rgba(29,158,117,0.35); background: #F0FBF7; color: #1A3D35; }
+  .dim-pill.is-graded { border-color: #0F6E56; background: #E1F5EE; color: #085041; }
+  .dim-pill.is-graded:hover { background: #D5F0E8; }
+  .dim-pill.is-selected.is-graded { border-color: #0A5C47; background: #CBF0E2; color: #063529; }
+
+  .level-pill {
+    width: 40px; height: 40px; border-radius: 8px; font-size: 14px;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    border: 1px solid #D1D5DB; color: #5A6070; cursor: pointer;
+    background: white; transition: border-color 0.12s, background 0.12s, color 0.12s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .level-pill:hover { border-color: #1D9E75; color: #1A3D35; background: #F0FBF7; }
+  .level-pill.is-selected { border-color: #0F6E56; background: #E1F5EE; color: #085041; }
+</style>
+</head>
+<body class="font-sans text-smoke min-h-screen relative overflow-x-hidden">
+
+<!-- Background field -->
+<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+  <svg class="absolute w-full h-full" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <path d="M-50,120 C180,90 320,150 560,115 C800,80 980,140 1220,105 C1400,80 1550,110 1650,95" stroke="#B8924A" stroke-opacity="0.045" stroke-width="1.1" fill="none"/>
+    <path d="M-50,210 C160,250 340,180 580,225 C820,270 1000,195 1240,235 C1420,265 1560,210 1650,230" stroke="#3A4150" stroke-opacity="0.07" stroke-width="1" fill="none"/>
+    <path d="M-50,330 C190,300 360,360 600,320 C840,280 1020,350 1260,310 C1440,280 1560,330 1650,305" stroke="#B8924A" stroke-opacity="0.04" stroke-width="1.1" fill="none"/>
+    <path d="M-50,460 C170,500 350,430 590,475 C830,520 1010,440 1250,485 C1430,515 1560,460 1650,480" stroke="#3A4150" stroke-opacity="0.06" stroke-width="1" fill="none"/>
+    <path d="M-50,560 C200,530 330,590 570,545 C810,500 990,565 1230,520 C1420,490 1550,540 1650,515" stroke="#B8924A" stroke-opacity="0.035" stroke-width="1.1" fill="none"/>
+    <path d="M-50,670 C180,710 360,640 600,685 C840,730 1010,650 1250,695 C1430,725 1560,670 1650,690" stroke="#3A4150" stroke-opacity="0.06" stroke-width="1" fill="none"/>
+  </svg>
+</div>
+
+<!-- Identity mark -->
+<a href="/" class="fixed top-6 left-6 z-20 flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink">
+  <img src="/HeadshotBW.jpg" alt="" class="w-9 h-11 rounded-lg object-cover object-[center_30%] border border-hairline" />
+  <span class="font-sans text-sm text-dim tracking-wide">David Facer</span>
+</a>
+
+<!-- Footer mark -->
+<div class="fixed bottom-6 right-6 z-20 text-dim/60 text-xs font-mono tracking-wide hidden sm:block">© 2026</div>
+
+<main class="relative z-10 min-h-screen px-6 py-28">
+  <div class="w-full max-w-5xl mx-auto">
+
+    <!-- Breadcrumb + page header -->
+    <div class="text-xs font-mono uppercase tracking-[0.18em] text-dim mb-4">
+      <a href="/professional/enterprise-architecture/" class="hover:text-brass transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/60 rounded-sm">Enterprise Architecture</a>
+      <span class="mx-2 opacity-40">/</span>
+      <span>Assessment</span>
+    </div>
+    <h1 class="font-display text-3xl md:text-4xl text-paper leading-snug mb-3">
+      AI-Native SDLC Maturity Assessment
+    </h1>
+    <p class="text-smoke text-[15px] leading-relaxed mb-8 max-w-2xl">
+      Self-score your organisation across 13 AI-native delivery dimensions. Download a summary for use with AI tools.
+    </p>
+
+    <!-- Tool container (light) -->
+    <div style="background:#ffffff;border-radius:16px;border:1px solid #232730;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,0.35);">
+
+      <!-- Instructions banner -->
+      <div style="background:#F8F9FA;border-bottom:1px solid #E2E5EA;padding:14px 24px;">
+        <p style="color:#3D4450;font-size:13.5px;line-height:1.6;margin:0;">
+          <strong style="font-weight:600;">How to use:</strong> Select any SDLC dimension on the left. Evaluate your organisation's maturity — for each level, everything in the definition must be true to merit that level. You can go in any order. The Download button unlocks once all 13 dimensions are graded.
+        </p>
+      </div>
+
+      <!-- Two-column body -->
+      <div style="display:flex;min-height:580px;">
+
+        <!-- Left panel: 210px -->
+        <div id="left-panel" style="width:210px;flex-shrink:0;background:#F5F6F8;border-right:1px solid #E2E5EA;padding:10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+        </div>
+
+        <!-- Right panel: flex fill -->
+        <div id="right-panel" style="flex:1;min-width:0;padding:24px;overflow-y:auto;">
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div style="border-top:1px solid #E2E5EA;padding:12px 24px;display:flex;align-items:center;gap:16px;">
+        <div style="flex:1;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;height:6px;background:#E2E5EA;border-radius:9999px;overflow:hidden;">
+            <div id="progress-bar" style="height:100%;background:#1D9E75;border-radius:9999px;width:0%;transition:width 0.3s ease;"></div>
+          </div>
+          <span id="progress-label" style="color:#868C97;font-size:13px;font-family:'JetBrains Mono',monospace;flex-shrink:0;">0 / 13</span>
+        </div>
+        <button id="download-btn" onclick="downloadMd()" disabled
+          style="padding:8px 20px;border-radius:8px;font-size:13.5px;font-weight:500;font-family:'Inter',system-ui,sans-serif;background:#1D9E75;color:white;border:none;opacity:0.32;cursor:not-allowed;transition:opacity 0.2s,cursor 0.2s;white-space:nowrap;">
+          Download .md
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Attribution -->
+    <p style="margin-top:14px;text-align:center;font-size:11.5px;font-family:'JetBrains Mono',monospace;color:#868C97;">
+      AI-Native SDLC Maturity Model © 2026 David Facer —
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" style="color:#B8924A;">CC BY 4.0</a>
+    </p>
+
+    <!-- Back link -->
+    <p class="mt-6 text-center">
+      <a href="/professional/enterprise-architecture/" class="text-dim text-sm hover:text-brass transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/60 rounded-sm">← Enterprise Architecture</a>
+    </p>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const DIMS = [
+  {
+    id: "D1", short: "Market Discovery",
+    name: "Market discovery & definition",
+    desc: "The capability to identify, size, and validate market opportunities (TAM/SAM/SOM, market trends, opportunity framing) through a continuous, AI-assisted discovery loop that directly feeds requirements work.",
+    levels: {
+      A: "Discovery happens periodically (e.g., at planning cycles), manually synthesized, with AI used inconsistently -- left to individual researcher preference, with no shared method.",
+      B: "Discovery runs on a defined cadence (e.g., quarterly) using a consistent AI-assisted method, but remains a Product-owned exercise -- outputs (TAM/SAM/SOM, trend analysis, opportunity framing) are produced for Product's own use and not routinely shared with Marketing, Sales, or Strategy.",
+      C: "Discovery becomes continuous rather than cadence-based -- market signals and opportunity models refresh on an ongoing basis. Outputs remain primarily Product-owned, though other functions can request access to current findings.",
+      D: "The continuous discovery model (per Level C) is a shared asset -- Marketing, Sales Enablement, and Strategy draw directly from the same underlying market/opportunity model rather than commissioning separate research, though each function still produces its own renderings manually.",
+      E: "Discovery (D1), persona (D2), and positioning/competitive intelligence (D3) operate as one converged intelligence layer that automatically generates function-specific renderings -- Product roadmap input, Marketing messaging, Sales battlecards, and Strategy narratives are all produced from the same continuously-updated model, each contextually adapted to its audience without separate commissioning. From D1's vantage: market signals, TAM/opportunity models, and trend data are the input lens this layer continuously refreshes."
+    }
+  },
+  {
+    id: "D2", short: "Persona Development",
+    name: "Buyer/user persona development",
+    desc: "The capability to research, model, and maintain live representations of target users and buyers, extensible as a shared asset across Product, Marketing, and Sales Enablement.",
+    levels: {
+      A: "User personas exist as static documents, created once (e.g., at launch or major redesign) and rarely revisited. Buyer personas are often an artifact of Marketing or Sales rather than Product Management. AI assistance, where used, is inconsistent -- left to individual preference, with no shared method.",
+      B: "User Personas are dynamic documents that are updated intervalically via Product Management and software usage data (via instrumentation or other usage reporting). AI assistance is ad hoc or based on departmental software.",
+      C: "User Personas and Buyer Personas are shared in the same system or system to system. They share relevant update data at regular intervals. The system uses a common AI with shared intelligence. Access is extended to relevant organizations including MKTG, Sales, Product, and Engineering.",
+      D: "Personas are dynamic, regularly updated artifacts fed by usage/feedback data, and are shared assets consumed directly by Marketing and Sales Enablement, not just Product. Engineering has connected access to relevant User Personas via regular requirements management system.",
+      E: "Discovery (D1), persona (D2), and positioning/competitive intelligence (D3) operate as one converged intelligence layer that automatically generates function-specific renderings -- Product roadmap input, Marketing messaging, Sales battlecards, and Strategy narratives are all produced from the same continuously-updated model, each contextually adapted to its audience without separate commissioning. From D2's vantage: live representations of target users and buyers are the input lens this layer continuously refreshes, extending to Engineering via the requirements management system (D4)."
+    }
+  },
+  {
+    id: "D3", short: "Competitive Intelligence",
+    name: "Positioning & competitive intelligence",
+    desc: "The capability to define product differentiation and maintain that positioning against a continuously monitored competitive landscape that actively informs roadmap decisions.",
+    levels: {
+      A: "Positioning was defined at a point in time (e.g., launch) and competitive awareness is ad hoc or anecdotal. AI assistance, where used, is inconsistent -- left to individual preference, with no shared method.",
+      B: "Competitive monitoring runs on a defined cadence using a consistent AI-assisted method (e.g., scheduled competitor and market scans), but remains a Product or Strategy-owned exercise -- findings inform internal roadmap discussions and are not routinely packaged for Marketing or Sales.",
+      C: "Competitive monitoring becomes continuous -- a live feed of market and messaging shifts updates on an ongoing basis. Findings remain primarily owned by Product/Strategy, though other functions can request access to current intelligence.",
+      D: "The continuous competitive intelligence feed (per Level C) is a shared asset -- Marketing and Sales Enablement draw directly from the same underlying competitive model (e.g., for messaging differentiation and battlecards) rather than commissioning separate competitive research, though each function still produces its own renderings manually.",
+      E: "Discovery (D1), persona (D2), and positioning/competitive intelligence (D3) operate as one converged intelligence layer that automatically generates function-specific renderings -- Product roadmap input, Marketing messaging, Sales battlecards, and Strategy narratives are all produced from the same continuously-updated model, each contextually adapted to its audience without separate commissioning. From D3's vantage: positioning and a live competitive landscape are the input lens this layer continuously refreshes."
+    }
+  },
+  {
+    id: "D4", short: "Requirements Management",
+    name: "Requirements management (specification quality & traceability)",
+    desc: "The capability to author precise, testable, machine-actionable specifications with full traceability from source through delivery, such that specification quality directly gates generation quality.",
+    levels: {
+      A: "Specifications are written informally (tickets, docs) with no consistent structure, and traceability from source to delivery is manual or absent.",
+      B: "Specifications are captured in a shared system of record with traceability from source to delivery. Relevant teams have shared access. Drawings, UX designs, wireframes, and functionality matrices are found in or linked to the system of record.",
+      C: "The shared system of record (per Level B) extends to cross-functional access -- Product, Engineering, QA, and Release Management all have shared access, and relevant user personas (per D2) are accessible to these teams within the same system.",
+      D: "Specifications are precise and testable enough to directly drive generation -- code, prototypes, and/or tests can be generated from the specification with minimal additional interpretation. Traceability and shared access (per Level C) are maintained automatically as generated artifacts are produced. The reverse direction -- generating or updating a specification from a prototype or test -- is not yet supported; the specification remains the required starting point.",
+      E: "Specifications are precise, testable, and machine-actionable with full traceability, and generation is sequence-agnostic -- code, prototypes, and tests can be generated from the specification, or the specification can be generated or updated from a prototype or test. The system doesn't care which artifact type initiates the work, though the team may choose a preferred sequence."
+    }
+  },
+  {
+    id: "D5", short: "Prototyping Boundary",
+    name: "Prototyping & the prototype-to-code boundary",
+    desc: "The capability to produce functional prototypes for validation, and to govern -- explicitly and consistently -- whether and how those prototypes transition into production code.",
+    levels: {
+      A: "Prototyping is ad hoc and the boundary between prototype and production code is undefined or unenforced -- prototypes may become production code by default.",
+      B: "Prototyping is common and AI-assisted, but the prototype-to-code boundary is governed only informally -- teams generally understand that prototypes need rework before production, but there is no defined process, checklist, or gate. Whether and how much rework happens depends on individual judgment and time pressure.",
+      C: "A defined decision point exists between prototype and production -- prototypes are explicitly evaluated against criteria (e.g., architectural fit per D6, test coverage per D7) before any code carries forward, and the decision (rewrite, partial reuse, or discard-and-rebuild) is documented. The evaluation is manual and happens after the prototype exists.",
+      D: "The decision criteria from Level C are applied during prototyping, not only after -- prototypes are built with carry-forward viability in mind from the start (e.g., generated against the same architectural constraints per D6-D), reducing the frequency of discard-and-rebuild outcomes driven by avoidable misalignment. The prototype-to-production decision remains an explicit, governed step, but is faster and less binary than at Level C.",
+      E: "Specification, prototype, and test are produced as a single governed motion (per D4-E / D7-E), sequence-agnostic about which artifact initiates the others. From D5's vantage: because the prototype is produced as part of this fused motion rather than as separate upfront investment, the carry-forward-vs-discard decision (per Levels C/D) is immediate and low-cost in either direction -- a prototype built purely to validate understanding can be discarded without having consumed the specification or test work, and a prototype that is viable carries forward with its specification and test already in hand. Discard-and-rebuild remains a normal, context-appropriate outcome at this level -- what changes is that the decision is no longer expensive."
+    }
+  },
+  {
+    id: "D6", short: "Architecture Governance",
+    name: "Architecture governance",
+    desc: "The capability to define, encode, and enforce architectural standards and design judgment (\"taste\") across a codebase as code is generated, modified, or extended by agents.",
+    levels: {
+      A: "Architectural standards exist only as tribal knowledge or informal conventions, enforced inconsistently through manual review.",
+      B: "Architectural standards are documented (style guides, architecture decision records, design docs) but enforcement remains manual -- reviewers check generated and human-written code against documentation, with consistency dependent on reviewer familiarity with the docs.",
+      C: "Core architectural rules are encoded as automated checks (linters, structural tests, CI gates) covering the most common and critical violations -- but coverage is partial, and violations outside the encoded rules still rely on manual review per Level B.",
+      D: "Architectural rules are encoded comprehensively enough that agents read and respect them directly during generation, not just check against them after the fact. Violations are caught and, where possible, accompanied by remediation guidance the agent can act on, reducing round-trips between generation and review.",
+      E: "Agents participate in evolving the encoded standard itself -- when an agent encounters a pattern not covered by existing rules, or notices a rule that has become a recurring obstacle, it proposes an addition or change to the encoded ruleset (linters, structural tests, remediation guidance) for human review. The team's architectural taste and the enforced standard co-evolve, with agents as active contributors to that evolution rather than only subjects of it."
+    }
+  },
+  {
+    id: "D7", short: "Test-driven Development",
+    name: "Test-driven development (specification-driven verification)",
+    desc: "The capability to couple test/specification authoring with implementation as one motion, and to scale verification coverage as generation volume scales.",
+    levels: {
+      A: "Tests exist and are written close in time to the code they cover, but are authored independently after implementation -- the test verifies what the code happens to do, rather than the code being written to satisfy a pre-specified test.",
+      B: "Tests are written before implementation (test-first), but as a separate authoring step from the specification -- a developer or agent translates the specification into tests manually, introducing a translation gap between what the specification says and what the test actually checks.",
+      C: "Test generation is derived directly from the specification (per D4) using a consistent, repeatable method -- the translation gap from Level B is closed for routine cases, though specification authors don't see the generated tests until after the fact.",
+      D: "Test generation occurs concurrently with specification authoring -- as a specification is written, corresponding tests are generated in the same step, surfacing ambiguities in the specification (e.g., undefined edge cases) at authoring time rather than later.",
+      E: "Test generation, specification authoring, and prototyping are a single governed motion (per D4-E / D5-E) -- verification coverage scales automatically as generation volume scales, and the system is sequence-agnostic about which artifact initiates the others."
+    }
+  },
+  {
+    id: "D8", short: "Code Verification & Review",
+    name: "Code verification & review",
+    desc: "The capability to apply human and automated judgment to generated code for correctness, security, maintainability, and alignment with intent, scaled appropriately to risk. Note: review of generated code is not a substitute for execution containment (D11) -- the two dimensions address different surfaces and neither compensates for the other's absence.",
+    levels: {
+      A: "Verification relies primarily on human line-by-line review of all generated code, regardless of risk or volume. Review capacity does not scale with generation volume -- as the rate of code generation increases, review either becomes a bottleneck or is skipped under pressure.",
+      B: "Deterministic automated gates (linters, SAST, basic CI checks) run on all code before human review, catching style and known-pattern issues. Human review remains the primary mechanism for correctness, design, and intent, and is still applied uniformly regardless of risk.",
+      C: "Review is risk-tiered -- routine, low-risk changes pass with automated gates alone (per Level B), while higher-risk or novel changes are routed to human review. Tiering criteria are defined but applied judgmentally on a per-change basis.",
+      D: "An AI review layer, structurally independent from the agent or model that generated the code, performs first-pass review across multiple concern areas (correctness, security, performance, standards) in parallel, surfacing findings ranked by severity. Human review is concentrated on findings the independent reviewer flags as high-severity, or on changes tiered as high-risk per Level C.",
+      E: "The independent review layer's findings and the team's risk-tiering criteria (per Levels C/D) are continuously calibrated against outcomes -- false-positive and false-negative rates are tracked, tiering thresholds adjust accordingly, and the review system's own effectiveness is itself under ongoing verification."
+    }
+  },
+  {
+    id: "D9", short: "Environments Management",
+    name: "Environment management",
+    desc: "The capability to provision, configure, and maintain the environments (dev/QA/staging/prod, etc.) through which code moves, including parity, ephemerality, self-provisioning, and cleanup.",
+    levels: {
+      A: "No standard environment separation exists -- development happens against a single shared, mutable environment (or directly against production), with no consistent dev/QA/staging/prod distinction.",
+      B: "Standard environments (dev/QA/staging/prod, etc.) exist but are manually provisioned and configured, with inconsistent parity between them.",
+      C: "Environments are defined as code (infrastructure-as-code) with consistent, repeatable configuration -- parity between environments is reliable. Provisioning a new environment instance still requires a human-initiated process.",
+      D: "Environments can be spun up and torn down on demand from templates, triggered by a human action (e.g., opening a PR, running a command). Ephemeral environments exist, but provisioning and cleanup remain human-triggered events rather than autonomous.",
+      E: "Environments are ephemeral and self-provisioned by agents on demand, including automated cleanup/teardown -- environment lifecycle requires no standing human maintenance."
+    }
+  },
+  {
+    id: "D10", short: "Release Discipline",
+    name: "Release discipline",
+    desc: "The capability to govern how validated changes move into production -- gating, approval, rollback, compliance, and release communications -- as a compressible, on-demand cycle rather than a fixed cadence.",
+    levels: {
+      A: "Releases follow a fixed cadence (e.g., sprint boundaries) with manual gating, approval, and announcement.",
+      B: "Releases occur more frequently than a fixed sprint cadence, and gating is partially automated (automated test suites must pass before release), but approval and release communications remain manual steps requiring human sign-off before each release.",
+      C: "Releases are triggered by commits passing automated gates (per D8) rather than by calendar -- deployment to production can happen multiple times per day. Rollback is automated (e.g., automatic revert on failed health check), but is treated as an exception-handling path rather than a normal part of the release pattern.",
+      D: "Pre-deployment gating, approval, and rollback are fully automated and triggered by signal (per Levels B/C) -- releases are on-demand and compliant by construction, with audit trail and compliance checks built into the gate itself (per D11-D). Rollback-as-primary-recovery is a normal, expected path, not an exception.",
+      E: "Pre-deployment gates (per Level D) are necessarily incomplete for AI-generated, non-deterministic output -- release decisions extend into production via live quality gates, using real-time performance signals (e.g., error budgets, evidence coverage) as part of the release decision itself, not only as post-release monitoring. A release can be incrementally validated and expanded, or rolled back, based on its live behavior, not only its pre-deployment checks."
+    }
+  },
+  {
+    id: "D11", short: "Security & Compliance",
+    name: "Security & compliance",
+    desc: "The capability to identify, assess, and mitigate security and regulatory risk introduced at any stage of the lifecycle, including risks novel to AI-generated artifacts and agent tooling.",
+    levels: {
+      A: "Agents execute with unrestricted access to the filesystem, shell, and network on whatever system runs them -- no sandboxing, no pre-execution validation of dangerous operations, and no agent-specific identity (agent activity is indistinguishable from the human operating it).",
+      B: "Agents execute within sandboxed environments (restricted syscalls, network egress controls) with pre-execution static checks for dangerous patterns (e.g., destructive shell commands, unvalidated file I/O); deterministic security scanning (SAST, secret detection) runs on all generated code regardless of origin. Agents still lack distinct identities, and shared memory or context across sessions is not integrity-checked.",
+      C: "Agent actions are mapped to identifiable, auditable identities (per-agent or per-session credentials, not shared human credentials) -- every agent-authored change can be traced to a specific agent, session, and initiating human. PR gates require this labeling, though individual override of the gate remains possible. Shared memory/context stores have basic integrity validation (e.g., provenance tagging) but no active poisoning detection.",
+      D: "PR gates for agent-authored changes are mandatory and non-bypassable by individual override -- required checks (security scanning, review, labeling) can only be waived through a named, logged exception process. Agent tooling itself (skills, MCP servers, plugins) is inventoried and treated as supply-chain surface subject to the same scanning. Audit evidence generation is automated rather than manually assembled.",
+      E: "Security policy for agent behavior is enforced at the point of action -- least-privilege scoping and runtime guardrails constrain what an agent can do during execution, with real-time termination ('kill switch') capability rather than after-the-fact logging alone. Shared memory and context are actively monitored for injected or anomalous content, not merely provenance-tagged."
+    }
+  },
+  {
+    id: "D12", short: "Observability",
+    name: "Instrumentation & observability",
+    desc: "The capability to monitor, trace, and evaluate system behavior in production, and to structure organizational knowledge (decisions, plans, metrics) for equal consumption by humans and agents, closing the loop back to upstream dimensions.",
+    levels: {
+      A: "Monitoring covers infrastructure/application metrics; organizational knowledge (decisions, plans, metrics) lives in human-readable formats not structured for agent consumption.",
+      B: "Build-time generation steps (D4-D8) produce some trace of agent reasoning (e.g., logs of prompts and outputs), but this is ad hoc, not systematically retained, and not used for evaluation -- when something goes wrong, the org has a deterministic output but no reliable visibility into why the agent produced it.",
+      C: "Build-time tracing (per Level B) is systematic and feeds evaluation -- generation-step traces are retained and used to diagnose recurring failure patterns in D4-D8's output (e.g., why D8's review keeps flagging the same kind of issue from generation), as a continuous practice rather than per-incident debugging.",
+      D: "The organization has identified where, if anywhere, AI participates in its own delivery system's runtime decisions (e.g., D9-E's self-provisioning, D10-E's live release gating) and applies runtime tracing and evaluation there, distinct from and in addition to the build-time tracing per Level C.",
+      E: "Build-time generation traces (per C), delivery-system runtime traces (per D), and production telemetry are equally and directly accessible to agents alongside humans, and observability data feeds back into upstream dimensions (e.g., D1) as part of a closed loop. The organization continuously re-evaluates where non-determinism lives in its delivery system as D1-D11 mature."
+    }
+  },
+  {
+    id: "D13", short: "Feedback Velocity",
+    name: "Feedback loop velocity",
+    desc: "The end-to-end cycle time from signal (market, user, incident, failure) to shipped response, as a property of the whole system rather than any individual stage.",
+    levels: {
+      A: "End-to-end cycle time from signal (market, user, incident) to shipped response is unmeasured and dominated by handoffs between disconnected stages/teams.",
+      B: "Cycle time is measured retrospectively for major releases or incidents (e.g., post-mortems calculate how long the response took), but isn't tracked continuously and isn't used to identify which handoff in the chain is the bottleneck.",
+      C: "Cycle time is tracked continuously as a standing metric, broken down by stage and handoff (per the D1-D3 -> fused D4/D5/D7 -> D6/D8 -> D9/D10 chain) -- the organization can identify which handoff currently dominates total cycle time, though addressing it requires separate prioritization and planning work.",
+      D: "Improving cycle time is a routine input to prioritization across D1-D12 -- when D13's measurement identifies a dominant bottleneck, closing it via the relevant dimension's next maturity step is treated as comparable in priority to feature work, not a separate platform initiative competing for attention.",
+      E: "End-to-end cycle time is short enough to be a competitive differentiator, operating on a days, not months, cadence -- achieved not by any single dimension but by D12-E's closed loop keeping every stage's transit time visible and D13-D's prioritization continuously compressing whichever handoff currently dominates."
+    }
+  }
+];
+
+const SCORE_MAP = { A: 1, B: 2, C: 3, D: 4, E: 5 };
+
+let scores = {};
+let selectedDim = null;
+let radarChart = null;
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function selectDim(id) {
+  selectedDim = id;
+  renderLeftPanel();
+  renderRightPanel();
+}
+
+function selectLevel(letter) {
+  if (!selectedDim) return;
+  if (scores[selectedDim] === letter) {
+    delete scores[selectedDim];
+  } else {
+    scores[selectedDim] = letter;
+  }
+  renderLeftPanel();
+  renderRightPanel();
+  renderProgress();
+}
+
+function renderLeftPanel() {
+  const panel = document.getElementById('left-panel');
+  panel.innerHTML = DIMS.map(d => {
+    const grade = scores[d.id];
+    const isSelected = selectedDim === d.id;
+    const isGraded = !!grade;
+    let cls = 'dim-pill';
+    if (isGraded) cls += ' is-graded';
+    if (isSelected) cls += ' is-selected';
+    return `<button class="${cls}" onclick="selectDim('${d.id}')">
+      <span style="display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0;opacity:0.75;">${d.id}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(d.short)}</span>
+      </span>
+      ${grade ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;">${grade}</span>` : ''}
+    </button>`;
+  }).join('');
+}
+
+function renderRightPanel() {
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+  const panel = document.getElementById('right-panel');
+  const hasAnyScore = Object.keys(scores).length > 0;
+
+  if (!selectedDim) {
+    panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:320px;color:#868C97;font-size:14px;font-family:'Inter',system-ui,sans-serif;">Select a dimension to begin.</div>`;
+    return;
+  }
+
+  const dim = DIMS.find(d => d.id === selectedDim);
+  const grade = scores[selectedDim] || null;
+  const levelDef = grade ? dim.levels[grade] : null;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px;font-family:'JetBrains Mono',monospace;color:#868C97;text-transform:uppercase;letter-spacing:0.13em;">
+      <span>${escHtml(dim.id)}</span>
+      ${grade ? `<span style="color:#0F6E56;font-weight:700;">${grade}</span>` : ''}
+    </div>
+    <h2 style="font-family:'Fraunces',Georgia,serif;font-size:21px;color:#0A0C10;margin:0 0 8px;line-height:1.3;">${escHtml(dim.name)}</h2>
+    <p style="color:#5A6070;font-size:13.5px;line-height:1.7;margin:0 0 24px;">${escHtml(dim.desc)}</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      ${['A','B','C','D','E'].map(l =>
+        `<button class="level-pill${grade === l ? ' is-selected' : ''}" onclick="selectLevel('${l}')">${l}</button>`
+      ).join('')}
+    </div>
+
+    ${levelDef ? `
+    <div style="background:#F5F6F8;border-radius:10px;border:1px solid #E2E5EA;padding:15px 18px;margin-bottom:28px;">
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.13em;color:#868C97;margin-bottom:8px;">Level ${grade} — definition</div>
+      <p style="color:#3D4450;font-size:13.5px;line-height:1.75;margin:0;">${escHtml(levelDef)}</p>
+    </div>
+    ` : `<div style="height:20px;"></div>`}
+
+    <div id="chart-container" style="display:${hasAnyScore ? 'block' : 'none'};">
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.13em;color:#868C97;margin-bottom:14px;">Maturity profile</div>
+      <div style="max-width:400px;margin:0 auto;">
+        <canvas id="radar-chart"></canvas>
+      </div>
+    </div>
+  `;
+
+  if (hasAnyScore) renderChart();
+}
+
+function renderChart() {
+  const container = document.getElementById('chart-container');
+  const canvas = document.getElementById('radar-chart');
+  if (!container || !canvas) return;
+
+  const data = DIMS.map(d => scores[d.id] ? SCORE_MAP[scores[d.id]] : 0);
+
+  radarChart = new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels: DIMS.map(d => d.id),
+      datasets: [{
+        data,
+        backgroundColor: 'rgba(29,158,117,0.12)',
+        borderColor: '#1D9E75',
+        pointBackgroundColor: '#1D9E75',
+        pointBorderColor: '#1D9E75',
+        pointRadius: 3,
+        borderWidth: 1.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        r: {
+          min: 0,
+          max: 5,
+          ticks: {
+            stepSize: 1,
+            callback: v => ['', 'A', 'B', 'C', 'D', 'E'][v] || '',
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            color: '#868C97',
+            backdropColor: 'transparent',
+          },
+          grid: { color: '#E2E5EA' },
+          angleLines: { color: '#E2E5EA' },
+          pointLabels: {
+            font: { family: "'JetBrains Mono', monospace", size: 11 },
+            color: '#5A6070',
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              return v > 0 ? `Level ${['','A','B','C','D','E'][v]}` : 'Not graded';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderProgress() {
+  const count = Object.keys(scores).length;
+  const pct = (count / 13) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = count + ' / 13';
+  const btn = document.getElementById('download-btn');
+  if (count === 13) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.32';
+    btn.style.cursor = 'not-allowed';
+  }
+}
+
+function downloadMd() {
+  const date = new Date().toISOString().split('T')[0];
+
+  const tableRows = DIMS.map(d => {
+    const g = scores[d.id];
+    return `| ${d.id} | ${d.name} | ${g || '—'} | ${d.short} |`;
+  }).join('\n');
+
+  const gradedScores = DIMS.map(d => scores[d.id] ? SCORE_MAP[scores[d.id]] : 0);
+  const avg = (gradedScores.reduce((a, b) => a + b, 0) / 13).toFixed(1);
+
+  const defsSection = DIMS.filter(d => scores[d.id]).map(d => {
+    const g = scores[d.id];
+    return `### ${d.id} — ${d.name}\n\n**Description:** ${d.desc}\n\n**Level ${g}:** ${d.levels[g]}`;
+  }).join('\n\n---\n\n');
+
+  const promptLines = DIMS.map(d => `> - ${d.id} ${d.short}: ${scores[d.id] || '—'}`).join('\n');
+
+  const md = `# AI-Native SDLC Maturity Assessment
+
+Generated: ${date}
+
+## Scores
+
+| Dimension | Name | Level | Label |
+|-----------|------|-------|-------|
+${tableRows}
+
+**Average score:** ${avg} / 5
+
+## Full Definitions
+
+${defsSection}
+
+## AI prompt
+
+Use the following prompt with Claude, ChatGPT, or any AI assistant to generate
+an Excel or Google Sheets version of this assessment:
+
+> Create a formatted maturity assessment spreadsheet for an AI-Native SDLC evaluation.
+> Framework: AI-Native SDLC Maturity Model by David Facer (CC BY 4.0)
+> Scores:
+${promptLines}
+>
+> Build a spreadsheet with:
+> (1) a scored dimension table with A–E colour coding (green=high, amber=mid, red=low),
+> (2) a radar chart of the maturity profile,
+> (3) the full level definition for each graded dimension,
+> (4) a notes column for each dimension.
+
+---
+
+AI-Native SDLC Maturity Model © 2026 David Facer — CC BY 4.0`;
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sdlc-maturity-assessment.md';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderLeftPanel();
+  renderRightPanel();
+  renderProgress();
+});
+</script>
+</body>
+</html>
