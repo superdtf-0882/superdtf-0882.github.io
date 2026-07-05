@@ -9,7 +9,6 @@ const staticPages = [
   '/',
   '/professional/',
   '/professional/enterprise-architecture/',
-  '/professional/enterprise-architecture/sdlc-maturity/',
   '/professional/cv/',
   '/sampleprototypes/',
   '/complexity-sovereignty-assessment/',
@@ -23,6 +22,18 @@ const nextConfig = {
       source: path,
       destination: `${path}index.html`,
     }));
+  },
+  // WP2b moved the SDLC Maturity Assessment to aisdlc.davidfacer.com. This
+  // path is now orphaned on the main site — redirect rather than leave it
+  // as dead weight (WP2 remainder item #3).
+  async redirects() {
+    return [
+      {
+        source: '/professional/enterprise-architecture/sdlc-maturity/',
+        destination: 'https://aisdlc.davidfacer.com/maturitymodelassessment/',
+        permanent: true,
+      },
+    ];
   },
 };
 
