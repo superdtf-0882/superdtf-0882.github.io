@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black Sea Monitor — Early Warning Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --surf2:   #1c2128;
+      --border:  #30363d;
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --accent:  #58a6ff;
+      --green:   #3fb950;
+      --yellow:  #d29922;
+      --red:     #f85149;
+      --orange:  #db6d28;
+      --purple:  #bc8cff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+
+    /* ── Site identity / nav / attribution (DS-003, DS-004, DS-008) ── */
+    .site-topbar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 24px 10px; display: flex; flex-direction: column; gap: 6px; }
+    .site-identity-mark { display: flex; align-items: center; gap: 10px; text-decoration: none; width: fit-content; }
+    .site-identity-mark img { width: 28px; height: 34px; border-radius: 6px; object-fit: cover; object-position: center 30%; border: 1px solid var(--border); }
+    .site-identity-mark span { font-size: 13px; color: var(--muted); letter-spacing: 0.02em; }
+    .site-breadcrumb { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .site-breadcrumb a { color: var(--muted); text-decoration: none; }
+    .site-breadcrumb a:hover { text-decoration: underline; }
+    .site-breadcrumb-sep { margin: 0 8px; opacity: 0.5; }
+    .site-attribution { position: fixed; bottom: 16px; right: 20px; z-index: 30; font-size: 11px; color: var(--muted); text-decoration: none; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+    .site-attribution:hover { color: var(--text); }
+
+    /* ── Header ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+    .header-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .header-right { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    #last-updated { font-size: 12px; color: var(--muted); }
+
+    /* ── City selector ── */
+    .city-bar { display: flex; gap: 6px; padding: 14px 24px 0; flex-wrap: wrap; }
+    .city-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 5px 14px; border-radius: 20px; cursor: pointer; transition: all 0.15s; }
+    .city-btn:hover { color: var(--text); border-color: var(--muted); }
+    .city-btn.active { background: var(--accent); border-color: var(--accent); color: #0d1117; font-weight: 600; }
+
+    /* ── Main layout ── */
+    .main { padding: 16px 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Dials row ── */
+    .dials-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 12px; }
+
+    /* ── Summary row (ECS + MTCS) ── */
+    .summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 16px 16px; text-align: center; }
+    .mtcs-card { border-color: rgba(88,166,255,0.25); background: linear-gradient(160deg, var(--surface) 55%, #181f2e); }
+    .mtcs-gauge-wrap { position: relative; width: 120px; height: 120px; margin: 0 auto 10px; }
+    .mtcs-gauge-wrap canvas { width: 120px !important; height: 120px !important; }
+    .ecs-value  { font-size: 30px; font-weight: 700; line-height: 1; }
+    .mtcs-value { font-size: 40px; font-weight: 700; line-height: 1; }
+    .mtcs-status  { font-size: 13px; font-weight: 500; margin-top: 6px; }
+    .card-sublabel { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .mtcs-footnote { font-size: 10px; color: var(--muted); margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); line-height: 1.5; text-align: left; }
+    @media (max-width: 600px) { .summary-row { grid-template-columns: 1fr; } }
+
+    /* ── Row 1 — MTCS command display (v5.0) ── */
+    .mtcs-row { margin-bottom: 12px; }
+    .mtcs-card-v5 {
+      background: linear-gradient(160deg, var(--surface) 55%, #181f2e);
+      border: 1px solid rgba(88,166,255,0.25);
+      border-radius: 8px;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: 3fr 4fr 3fr;
+      gap: 20px;
+      align-items: center;
+    }
+    .mtcs-panel-left  { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+    .mtcs-panel-right { display: flex; flex-direction: column; gap: 5px; text-align: right; min-width: 0; }
+    .mtcs-panel-center { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+    .mtcs-panel-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 4px; }
+    .mtcs-comp-line { font-size: 13px; color: var(--text); line-height: 1.65; }
+    .mtcs-comp-line span[title] { cursor: help; border-bottom: 1px dotted var(--muted); }
+    .mtcs-gauge-wrap-lg { position: relative; width: 180px; height: 180px; margin: 0 auto 8px; }
+    .mtcs-gauge-wrap-lg canvas { width: 180px !important; height: 180px !important; }
+    .mtcs-value-lg {
+      font-size: 50px; font-weight: 700; line-height: 1;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .mtcs-change-lg { font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .mtcs-change-lg.up   { color: var(--red); }
+    .mtcs-change-lg.down { color: var(--green); }
+    .mtcs-band-name { font-size: 24px; font-weight: 700; line-height: 1.2; }
+    .mtcs-status-desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
+    .mtcs-active-condition {
+      font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--border); line-height: 1.5;
+    }
+    @media (max-width: 600px) {
+      .mtcs-card-v5 { grid-template-columns: 1fr; text-align: center; }
+      .mtcs-panel-left, .mtcs-panel-right { align-items: center; text-align: center; }
+    }
+
+    /* ── Row 2 — sector signals: ECS + OFP ── */
+    .sector-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .sector-row { grid-template-columns: 1fr; } }
+
+    /* ── Row 3 — feeder signals header ── */
+    .feeder-header { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 8px; }
+
+    .dial-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 14px 16px; text-align: center; }
+    .dial-card .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-top: 10px; }
+
+    .dial-canvas-wrap { position: relative; width: 130px; height: 74px; margin: 0 auto 6px; }
+    .dial-canvas-wrap canvas { width: 130px !important; height: 130px !important; position: absolute; top: -56px; left: 0; }
+
+    .dial-value { font-size: 26px; font-weight: 700; line-height: 1; }
+    .dial-band  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .dial-change { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .dial-change.up   { color: var(--green); }
+    .dial-change.down { color: var(--red); }
+
+    .spread-card { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .spread-value { font-size: 36px; font-weight: 700; }
+    .spread-label-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .spread-fragility-note { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.4; text-align: center; max-width: 160px; }
+    /* Wider variant for the full-width summary cards */
+    .card-descriptor { font-size: 10px; color: var(--muted); margin-top: 8px; line-height: 1.4; text-align: center; }
+    .card-descriptor-lg { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.4; text-align: center; }
+    /* RPI / CCI cards — pressure scale (high = bad, red) */
+    .pressure-card .dial-value { }
+    .dial-sublabel { font-size: 10px; color: var(--muted); margin-top: 3px; font-style: italic; }
+
+    /* ── Quality badge ── */
+    .quality-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin-top: 6px; font-weight: 600; letter-spacing: 0.04em; }
+    .quality-real      { background: rgba(63,185,80,0.15);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
+    .quality-mixed     { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
+    .quality-estimated { background: rgba(88,166,255,0.12); color: var(--accent); border: 1px solid rgba(88,166,255,0.25); }
+    .quality-uncertain { background: rgba(188,140,255,0.12); color: var(--purple); border: 1px solid rgba(188,140,255,0.25); }
+
+    /* ── Tab bar ── */
+    .tab-bar { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .tab-btn { background: none; border: none; color: var(--muted); font-size: 13px; padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Chart panel ── */
+    .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; display: none; }
+    .chart-panel.active { display: block; }
+    .chart-panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .chart-panel .chart-desc { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .chart-wrap { position: relative; height: 300px; }
+
+    /* ── Alert banner ── */
+    .alert-banner { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #ffa198; display: none; }
+    .alert-banner.visible { display: block; }
+    .alert-new { background: rgba(248,81,73,0.25); color: #ffa198; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; padding: 1px 5px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+    .alert-row-new { border-left: 2px solid rgba(248,81,73,0.6); padding-left: 6px; margin-left: -6px; }
+
+    /* ── Time scrubber ── */
+    #time-scrubber { padding: 0 24px 0; margin-bottom: 10px; }
+    .scrubber-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+    .scrubber-months { display: flex; gap: 5px; flex-wrap: wrap; }
+    .month-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 3px 10px; border-radius: 14px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .month-btn:hover { color: var(--text); border-color: var(--muted); }
+    .month-btn.active { background: var(--accent); border-color: var(--accent); color: #0d1117; font-weight: 600; }
+    .month-btn.latest { border-color: rgba(56,139,253,0.4); }
+
+    /* ── Historical view banner ── */
+    #hist-banner { display: none; background: rgba(56,139,253,0.1); border: 1px solid rgba(56,139,253,0.4); border-radius: 6px; padding: 8px 14px; margin-bottom: 10px; font-size: 12px; color: #58a6ff; }
+    #hist-banner.visible { display: flex; align-items: center; gap: 10px; }
+    #hist-banner a { color: #58a6ff; text-decoration: underline; cursor: pointer; }
+
+    /* ── What Changed strip ── */
+    #diff-strip { display: none; margin-bottom: 14px; }
+    #diff-strip.visible { display: block; }
+    .diff-strip-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 7px; }
+    .diff-chips { display: flex; flex-wrap: wrap; gap: 6px; overflow-x: auto; }
+    .diff-chip { display: flex; flex-direction: column; gap: 2px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 11px; min-width: 80px; }
+    .diff-chip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .diff-chip-vals  { color: var(--fg); white-space: nowrap; }
+    .diff-chip-delta { font-size: 10px; font-weight: 600; }
+
+    /* ── Events legend ── */
+    .events-legend { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+    .events-legend h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 10px; }
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 7px; }
+    .event-item { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; }
+    .event-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .event-date { color: var(--muted); white-space: nowrap; }
+
+    /* ── Status bar ── */
+    .status-bar { margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 18px; display: flex; gap: 28px; flex-wrap: wrap; align-items: center; }
+    .status-item { font-size: 12px; }
+    .status-item .s-label { color: var(--muted); margin-right: 5px; }
+    .status-item .s-val   { font-weight: 600; }
+
+    /* ── Mortgage mini-table ── */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    .mini-table th { color: var(--muted); font-weight: 500; text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--border); }
+    .mini-table td { padding: 5px 10px; border-bottom: 1px solid #21262d; }
+    .mini-table tr:last-child td { border-bottom: none; }
+    .tag-real { color: var(--green); font-size: 10px; }
+    .tag-est  { color: var(--muted); font-size: 10px; }
+
+    /* ── Buy vs Rent panel ── */
+    .buyrent-note {
+      background: rgba(88,166,255,0.07);
+      border: 1px solid rgba(88,166,255,0.2);
+      border-radius: 6px;
+      padding: 11px 14px;
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 20px;
+      line-height: 1.65;
+    }
+    .buyrent-note strong { color: var(--text); }
+    .buyrent-note em { color: var(--orange); font-style: normal; font-weight: 600; }
+
+    .buyrent-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .buyrent-table th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: right; }
+    .buyrent-table th:first-child { text-align: left; }
+    .buyrent-table td { padding: 10px 12px; border-bottom: 1px solid #21262d; text-align: right; vertical-align: middle; }
+    .buyrent-table td:first-child { text-align: left; font-weight: 600; }
+    .buyrent-table tr:last-child td { border-bottom: none; }
+    .buyrent-table tr.mariupol-row { background: rgba(219,109,40,0.07); }
+    .buyrent-table tr.mariupol-row td:first-child { color: var(--orange); }
+    .buyrent-mariupol-note { font-size: 11px; color: var(--orange); margin-top: 12px; padding: 8px 12px; background: rgba(219,109,40,0.08); border-left: 3px solid var(--orange); border-radius: 0 4px 4px 0; }
+    .premium-positive { color: var(--red); font-weight: 600; }
+    .premium-neutral  { color: var(--muted); }
+    .city-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+
+    /* ── Permanence insight box ── */
+    .perm-insight {
+      background: rgba(210,153,34,0.08);
+      border: 1px solid rgba(210,153,34,0.25);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #c9a227;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .perm-insight strong { color: #e8b84b; }
+
+    /* ── Permanence city mini-cards ── */
+    .perm-city-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .perm-city-card {
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+    .perm-city-card .pcc-name  { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+    .perm-city-card .pcc-ratio { font-size: 24px; font-weight: 700; line-height: 1; }
+    .perm-city-card .pcc-label { font-size: 11px; margin-top: 3px; }
+    .perm-city-card .pcc-econ  { font-size: 11px; color: var(--muted); margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .perm-city-card .pcc-spark { margin-top: 8px; }
+    .perm-city-card canvas     { display: block; }
+
+    /* ── Allspread provenance legend ── */
+    .allspread-provenance { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .provenance-solid  { color: var(--text); font-weight: 600; margin-right: 4px; }
+    .provenance-dashed { color: var(--text); font-weight: 600; margin-right: 4px; margin-left: 16px; }
+
+    /* ── Buckwheat note ── */
+    .buckwheat-note {
+      background: rgba(188,140,255,0.07);
+      border: 1px solid rgba(188,140,255,0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.65;
+    }
+    .buckwheat-note strong { color: var(--purple); }
+
+    /* ── Loading ── */
+    #loading { text-align: center; padding: 60px; color: var(--muted); }
+
+    @media (max-width: 1100px) { .dials-row { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px)  { .dials-row { grid-template-columns: repeat(2, 1fr); } .main { padding: 10px; } }
+  </style>
+</head>
+<body>
+
+<div class="site-topbar">
+  <a href="https://davidfacer.com/" class="site-identity-mark">
+    <img src="/HeadshotBW.jpg" alt="">
+    <span>David Facer</span>
+  </a>
+  <div class="site-breadcrumb">
+    <a href="https://davidfacer.com/">← davidfacer.com</a>
+    <span class="site-breadcrumb-sep">/</span>
+    <span>Research</span>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>⬡ Black Sea Monitor</h1>
+    <div class="header-sub">Geopolitical Early Warning — Real Estate Signal Tracker · <a href="https://github.com/superdtf-0882/BlackSeaRealEstate/blob/main/README.md" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px dotted">Methodology v5.0</a></div>
+  </div>
+  <div class="header-right">
+    <div id="last-updated">Loading…</div>
+  </div>
+</header>
+
+<!-- City selector -->
+<div class="city-bar" id="city-bar"></div>
+
+<div class="main" id="app" style="display:none">
+
+  <!-- Alert -->
+  <div class="alert-banner" id="alert-banner"></div>
+
+  <!-- What Changed strip -->
+  <div id="diff-strip">
+    <div class="diff-strip-title" id="diff-strip-title">Since last update</div>
+    <div class="diff-chips" id="diff-chips"></div>
+  </div>
+
+  <!-- Time scrubber -->
+  <div id="time-scrubber" style="display:none">
+    <div class="scrubber-label">Historical view — select month</div>
+    <div class="scrubber-months" id="scrubber-months"></div>
+  </div>
+
+  <!-- Historical view banner -->
+  <div id="hist-banner">
+    <span id="hist-banner-text"></span>
+    <a id="hist-return" onclick="setViewMonth(null)">↩ Return to current</a>
+  </div>
+
+  <!-- Row 1 — MTCS command display -->
+  <div class="mtcs-row">
+    <div class="mtcs-card-v5">
+
+      <!-- Left panel — composition breakdown -->
+      <div class="mtcs-panel-left">
+        <div class="mtcs-panel-label">MTCS Composition</div>
+        <div class="mtcs-comp-line">Real Estate + Energy: <span id="mtcs-base-line">—</span></div>
+        <div class="mtcs-comp-line">Fiscal Pressure (OFP): <span id="mtcs-modulator-line" title="OFP modulator: +2 at OFP 41–55 · +4 at 56–70 · +6 at 71–85 · +8 at 86–100">—</span></div>
+        <div class="mtcs-comp-line">Master Signal: <span id="mtcs-final-line">—</span></div>
+      </div>
+
+      <!-- Center panel — full donut gauge -->
+      <div class="mtcs-panel-center">
+        <div class="mtcs-gauge-wrap-lg" title="How much of Russia's territorial control is self-sustaining — and how much requires continuous state spending to maintain. When private investors and local residents act independently of the state, the occupation has a foundation. When the state is the only actor, it doesn't. This number measures the gap.
+
+Computation: Real estate sector (50%) + energy/consumer sector (50%), plus OFP fiscal modulator (+0 to +8). Base signal reflects what private actors and residents are doing. OFP reflects whether Moscow can keep paying for it.">
+          <canvas id="gauge-mtcs"></canvas>
+          <div class="mtcs-value-lg" id="mtcs-val">—</div>
+        </div>
+        <div class="mtcs-change-lg" id="mtcs-chg"></div>
+        <div class="card-label" style="margin-top:8px">Master Territorial Confidence Signal</div>
+      </div>
+
+      <!-- Right panel — threshold band + status + most severe condition -->
+      <div class="mtcs-panel-right">
+        <div class="mtcs-band-name" id="mtcs-band-name" title="How much of Russia's territorial control is self-sustaining — and how much requires continuous state spending to maintain. When private investors and local residents act independently of the state, the occupation has a foundation. When the state is the only actor, it doesn't. This number measures the gap.
+
+Computation: Real estate sector (50%) + energy/consumer sector (50%), plus OFP fiscal modulator (+0 to +8). Base signal reflects what private actors and residents are doing. OFP reflects whether Moscow can keep paying for it.">—</div>
+        <div class="mtcs-status-desc" id="mtcs-status">Computing…</div>
+        <div class="mtcs-active-condition" id="mtcs-active-condition"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Row 2 — sector signals: ECS + OFP -->
+  <div class="sector-row">
+
+    <!-- ECS — Energy & Consumer Stress Composite -->
+    <div class="summary-card ecs-card">
+      <div class="dial-canvas-wrap" style="margin-bottom:12px"><canvas id="gauge-ecs"></canvas></div>
+      <div class="ecs-value" id="ecs-val">—</div>
+      <div class="dial-band" id="ecs-band"></div>
+      <div class="dial-change" id="ecs-chg"></div>
+      <div class="card-descriptor">Measures degradation of Russian energy infrastructure (RPI) combined with acute civilian stress in occupied territories (CCI). Rising ECS = refinery capacity falling, fuel shortages emerging, panic goods disappearing. ECS rising while permanence ratio holds = residents riding out a temporary shock. Both rising together = behavioral change likely imminent.</div>
+      <div class="card-label" style="margin-top:8px">Energy &amp; Consumer Stress</div>
+      <div class="card-sublabel">RPI × 0.5 + CCI × 0.5</div>
+    </div>
+
+    <!-- OFP — Occupation Financial Pressure -->
+    <div class="summary-card pressure-card" id="ofp-card">
+      <div class="dial-canvas-wrap" style="margin-bottom:12px"><canvas id="gauge-ofp"></canvas></div>
+      <div class="ecs-value" id="ofp-val">—</div>
+      <div class="dial-band" id="ofp-band"></div>
+      <div class="dial-change" id="ofp-chg"></div>
+      <div class="card-descriptor">Composite of export revenue proxy, NWF liquid reserves, OFZ debt stress, regional budget cuts, and shadow fleet enforcement stress. Higher = more pressure on the fiscal stream that funds occupation administration and the war effort.</div>
+      <div class="card-label" style="margin-top:8px">Occupation Financial Pressure</div>
+      <div class="card-sublabel" id="ofp-modulator-note">MTCS modulator: —</div>
+    </div>
+
+  </div>
+
+  <!-- Row 3 — feeder signals -->
+  <div class="feeder-header">Feeder Signals</div>
+  <div class="dials-row">
+    <div class="dial-card">
+      <div class="dial-canvas-wrap"><canvas id="gauge-sci"></canvas></div>
+      <div class="dial-value" id="sci-val">—</div>
+      <div class="dial-band"  id="sci-band"></div>
+      <div class="dial-change" id="sci-chg"></div>
+      <div class="card-label">State Commitment Index</div>
+    </div>
+    <div class="dial-card">
+      <div class="dial-canvas-wrap"><canvas id="gauge-ta"></canvas></div>
+      <div class="dial-value" id="ta-val">—</div>
+      <div class="dial-band"  id="ta-band"></div>
+      <div class="dial-change" id="ta-chg"></div>
+      <div class="card-label">Track A — Private Market</div>
+    </div>
+    <div class="dial-card">
+      <div class="dial-canvas-wrap"><canvas id="gauge-tb"></canvas></div>
+      <div class="dial-value" id="tb-val">—</div>
+      <div class="dial-band"  id="tb-band"></div>
+      <div class="dial-change" id="tb-chg"></div>
+      <div class="card-label">Track B — Residential Outcome</div>
+    </div>
+    <div class="dial-card spread-card">
+      <div class="spread-value" id="spread-val">—</div>
+      <div class="spread-label-sub">B − (SCI×0.4 + A×0.6)</div>
+      <div class="dial-change" id="spread-chg" style="margin-top:8px"></div>
+      <div id="quality-badge-wrap" style="margin-top:6px"></div>
+      <div class="spread-fragility-note">Negative = composite outpaces residential reality (fragility signal). More negative = more fragile.</div>
+      <div class="card-label">Composite Spread</div>
+    </div>
+    <div class="dial-card pressure-card">
+      <div class="dial-canvas-wrap"><canvas id="gauge-rpi"></canvas></div>
+      <div class="dial-value" id="rpi-val">—</div>
+      <div class="dial-band"  id="rpi-band"></div>
+      <div class="dial-change" id="rpi-chg"></div>
+      <div class="card-label">Refinery Pressure Index</div>
+    </div>
+    <div class="dial-card pressure-card">
+      <div class="dial-canvas-wrap"><canvas id="gauge-cci"></canvas></div>
+      <div class="dial-value" id="cci-val">—</div>
+      <div class="dial-band"  id="cci-band"></div>
+      <div class="dial-change" id="cci-chg"></div>
+      <div class="dial-sublabel">Buckwheat index + fuel stress + grey market</div>
+      <div class="card-label">Civilian Confidence Index</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="prices">Crimea Price Index</button>
+    <button class="tab-btn" data-tab="allspread">Multi-City Spread</button>
+    <button class="tab-btn" data-tab="composite">Three-Dial Composite</button>
+    <button class="tab-btn" data-tab="spread">Composite Spread</button>
+    <button class="tab-btn" data-tab="buyrent">Buy vs Rent Economics</button>
+    <button class="tab-btn" data-tab="permanence">Permanence Ratio</button>
+    <button class="tab-btn" data-tab="rpi">Refinery Pressure</button>
+    <button class="tab-btn" data-tab="cci">Civilian Confidence</button>
+    <button class="tab-btn" data-tab="ofp">Occupation Financial Pressure</button>
+  </div>
+
+  <!-- Chart: Crimea prices -->
+  <div class="chart-panel active" id="tab-prices">
+    <h2>Crimea Residential Price Index</h2>
+    <div class="chart-desc">Biweekly secondary apartment prices ₽/m² · Source: Restate.ru — all 26 readings real · Mariupol new-build reference line added for context</div>
+    <div class="chart-wrap"><canvas id="chart-prices"></canvas></div>
+    <div class="events-legend" id="events-prices"></div>
+  </div>
+
+  <!-- Chart: Multi-city spread -->
+  <div class="chart-panel" id="tab-allspread">
+    <h2>Composite Spread — All Cities (12 months)</h2>
+    <div class="chart-desc">B − (SCI×0.4 + A×0.6) weighted by city · Above zero = residential confidence leads · Below zero = fragility zone · Solid = real data anchors (Mariupol, Crimea) · Dashed = estimated (Donetsk, Luhansk, Berdiansk)</div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chart-allspread"></canvas></div>
+    <div class="events-legend" id="events-allspread"></div>
+    <div class="allspread-provenance">
+      <span class="provenance-solid">— Solid lines</span> Mariupol and Crimea are anchored by sourced data (PSB/ЕИСЖС disclosures, Restate.ru price series).
+      <span class="provenance-dashed">- - Dashed lines</span> Donetsk, Luhansk, and Berdiansk spreads are calibrated estimates — improve with Домклик listing trend data and Avito rental scrapes.
+    </div>
+  </div>
+
+  <!-- Chart: Composite -->
+  <div class="chart-panel" id="tab-composite">
+    <h2>Three-Dial Composite — <span id="composite-city-label">—</span></h2>
+    <div class="chart-desc">SCI, Track A, Track B on 0–100 scale · Shaded bands = lo/hi confidence range where available</div>
+    <div class="chart-wrap"><canvas id="chart-composite"></canvas></div>
+    <div class="events-legend" id="events-composite"></div>
+  </div>
+
+  <!-- Chart: Spread (single city) -->
+  <div class="chart-panel" id="tab-spread">
+    <h2>Composite Spread — <span id="spread-city-label">—</span></h2>
+    <div class="chart-desc">B − (SCI×0.4 + A×0.6) · Positive = residential confidence leads composite · Negative = state+private composite outpaces residential reality (fragility signal)</div>
+    <div class="chart-wrap"><canvas id="chart-spread"></canvas></div>
+    <div class="events-legend" id="events-spread"></div>
+  </div>
+
+  <!-- Panel: Buy vs Rent Economics -->
+  <div class="chart-panel" id="tab-buyrent">
+    <h2>Buy vs Rent Economics — Permanence Cost by City</h2>
+    <div class="chart-desc">Monthly ownership cost (2% mortgage, 35m², 10% down) vs typical rental · Source: permanence_ratio.json buy_vs_rent_economics</div>
+    <div class="buyrent-note">
+      In a 2% mortgage environment, buying is cheaper than renting in every city <em>except Mariupol new build</em>.
+      Anyone renting despite this is paying a measurable premium for optionality.
+      <strong>That premium is the permanence uncertainty signal.</strong>
+    </div>
+    <div id="buyrent-table-wrap"></div>
+  </div>
+
+  <!-- Chart: Permanence Ratio -->
+  <div class="chart-panel" id="tab-permanence">
+    <h2>Permanence Ratio — All Cities</h2>
+    <div class="chart-desc">
+      local_mortgages ÷ (local_mortgages + rental_listings) × 100 &nbsp;·&nbsp;
+      Mariupol adjusted to 18% local buyers (PSB disclosure) &nbsp;·&nbsp;
+      Dashed lines = estimated data
+    </div>
+    <div class="perm-insight">
+      In a 2% mortgage environment, buying is cheaper than renting on monthly cash flow
+      (Donetsk: ₽4,500/mo own vs ₽17,000/mo rent). Anyone still renting is paying a
+      <strong>premium for optionality</strong> — that premium is the permanence uncertainty signal.
+      A ratio below 50 means optionality is winning.
+    </div>
+    <div class="chart-wrap" style="height:340px"><canvas id="chart-permanence"></canvas></div>
+    <div class="perm-city-grid" id="perm-city-grid"></div>
+  </div>
+
+  <!-- Chart: Refinery Pressure Index -->
+  <div class="chart-panel" id="tab-rpi">
+    <h2>Refinery Pressure Index — 12 Months</h2>
+    <div class="chart-desc">Capacity pressure (CREA) · Strike score (GUR/OSInt, weighted) · Export pressure (Kpler Novorossiysk) · RPI composite · All readings estimated pending live fetch</div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chart-rpi"></canvas></div>
+  </div>
+
+  <!-- Chart: Civilian Confidence Index -->
+  <div class="chart-panel" id="tab-cci">
+    <h2>Civilian Confidence Index — 12 Months</h2>
+    <div class="chart-desc">Fuel price premium · Panic keyword score (Telegram) · Avito/barter grey market premium · CCI composite · June 2026: all three sub-indicators sourced (Chistikov/UNN)</div>
+    <div id="cci-critical-callout" style="display:none;background:rgba(248,81,73,0.12);border:1.5px solid #f85149;border-radius:6px;padding:14px 18px;margin-bottom:14px;line-height:1.6">
+      🌾🔴 <strong>BUCKWHEAT INDEX ACTIVE</strong> — first critical CCI reading in dataset.<br>
+      Panic purchasing of staple goods (гречка, rice, salt, sugar, flour, pasta, cereals) confirmed by named Ukrainian government source, June 12 2026.<br>
+      Fuel rationing at 20L/week (from 20L/day). Barter economy active: real estate agency offering villa stays for fuel canisters.<br>
+      <em>This is the signal the model was built to detect.</em><br>
+      <span style="font-size:0.82em;color:#8b949e">Source: UNN, June 12 2026 — Denys Chistikov, Deputy Permanent Representative of the President of Ukraine in Crimea</span>
+    </div>
+    <div class="buckwheat-note">
+      🌾 <strong>Buckwheat signal:</strong> гречка (buckwheat) disappears from occupied-city retail within hours of genuine population fear — documented in 2014 Crimea annexation and Sep 2022 mobilization.
+      Grey market Avito activation (2–5× retail price) = official supply chain failure. Monitor alongside sugar, тушёнка, diesel.
+      If CCI rises while Permanence Ratio holds — residents riding out a shock, long-term bet intact.
+      If both move together — behavioral change likely imminent.
+    </div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chart-cci"></canvas></div>
+  </div>
+
+  <!-- Chart: Occupation Financial Pressure -->
+  <div class="chart-panel" id="tab-ofp">
+    <h2>Occupation Financial Pressure</h2>
+    <div class="chart-desc">Export revenue proxy · NWF liquid %GDP score · OFZ debt stress · OFP composite · Threshold bands at 40/55/70/85 mark MTCS modulator step-ups</div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chart-ofp"></canvas></div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item"><span class="s-label">Crimea readings:</span><span class="s-val" id="st-crimea">—</span></div>
+    <div class="status-item"><span class="s-label">Mortgage total (Dec 2025):</span><span class="s-val" id="st-mort">—</span></div>
+    <div class="status-item"><span class="s-label">Domclick Donetsk apts:</span><span class="s-val" id="st-dok">—</span></div>
+    <div class="status-item"><span class="s-label">Domclick Luhansk houses:</span><span class="s-val" id="st-luh">—</span></div>
+    <div class="status-item"><span class="s-label">Data as of:</span><span class="s-val" id="st-latest">—</span></div>
+  </div>
+
+</div>
+
+<div id="loading">Loading data…</div>
+
+<script>
+// ── Colour helpers ────────────────────────────────────────────────────────
+function sciColor(v)    { return v >= 75 ? "#f85149" : v >= 55 ? "#d29922" : "#3fb950"; }
+function trackAColor(v) { return v >= 45 ? "#58a6ff" : v >= 30 ? "#d29922" : "#8b949e"; }
+function trackBColor(v) { return v >= 45 ? "#3fb950" : v >= 28 ? "#d29922" : "#f85149"; }
+// Positive spread = B leads composite (residential confidence ahead) = green/good
+// Negative spread = composite leads B (state+private outpacing reality) = warning
+function spreadColor(s) { return s >= 15 ? "#3fb950" : s >= 0 ? "#58a6ff" : s >= -15 ? "#d29922" : "#f85149"; }
+// Pressure indices: high = bad → red
+function rpiColor(v)  { return v >= 70 ? "#f85149" : v >= 50 ? "#d29922" : v >= 35 ? "#58a6ff" : "#3fb950"; }
+function cciColor(v)  { return v >= 65 ? "#f85149" : v >= 45 ? "#d29922" : v >= 25 ? "#58a6ff" : "#3fb950"; }
+// Summary composites
+function ecsColor(v)  { return v >= 65 ? "#f85149" : v >= 45 ? "#d29922" : v >= 25 ? "#58a6ff" : "#3fb950"; }
+function mtcsColor(v) { return v > 80 ? "#ff3333" : v > 65 ? "#f85149" : v > 50 ? "#d29922" : v > 30 ? "#58a6ff" : "#3fb950"; }
+function mtcsStatus(v) {
+  if (v > 80) return "The occupation is in acute distress. Behavioral change — population movement, market exit, administrative breakdown — is expected.";
+  if (v > 65) return "The occupation is held together by state spending and inertia. It has no independent foundation. Any shock to either breaks it.";
+  if (v > 50) return "Pressure is confirmed across multiple sectors. The state is working hard to project stability it is not generating organically.";
+  if (v > 30) return "The state is doing more work than the market or residents are. Early fragility signal.";
+  return "Signals are aligned. The occupation appears self-sustaining.";
+}
+// Short threshold-band label for the Row 1 right panel — same thresholds as mtcsColor/mtcsStatus.
+function mtcsBandName(v) {
+  if (v > 80) return "Acute Signal";
+  if (v > 65) return "Fragility Zone";
+  if (v > 50) return "Structural Stress";
+  if (v > 30) return "State Dependent";
+  return "Self-Sustaining";
+}
+
+function qualityClass(q) {
+  return { real: "quality-real", mixed: "quality-mixed", estimated: "quality-estimated", uncertain: "quality-uncertain" }[q] || "quality-estimated";
+}
+
+function qualityLabel(q) {
+  return { real: "● REAL", mixed: "◑ MIXED", estimated: "○ EST", uncertain: "? UNCERTAIN" }[q] || q.toUpperCase();
+}
+
+// ── Gauge renderers ───────────────────────────────────────────────────────
+const gaugeInstances = {};
+
+// Half-moon (180°) — used by SCI, Track A, Track B, RPI, CCI, ECS
+function drawGauge(id, value, color) {
+  const pct = Math.min(Math.max(value, 0), 100) / 100;
+  const el  = document.getElementById(id);
+  if (!el) return;
+  if (gaugeInstances[id]) gaugeInstances[id].destroy();
+  gaugeInstances[id] = new Chart(el.getContext("2d"), {
+    type: "doughnut",
+    data: { datasets: [{ data: [pct, 1 - pct], backgroundColor: [color, "#21262d"], borderWidth: 0, circumference: 180, rotation: 270 }] },
+    options: { responsive: false, cutout: "72%", plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 500 } }
+  });
+}
+
+// Full circle (360°) — used exclusively by MTCS as master instrument
+function drawFullGauge(id, value, color) {
+  // 8% floor: prevents gauge looking broken when system is genuinely stable at low values
+  const pct = Math.max(0.08, Math.min(Math.max(value, 0), 100) / 100);
+  const el  = document.getElementById(id);
+  if (!el) return;
+  if (gaugeInstances[id]) gaugeInstances[id].destroy();
+  gaugeInstances[id] = new Chart(el.getContext("2d"), {
+    type: "doughnut",
+    data: { datasets: [{ data: [pct, 1 - pct], backgroundColor: [color, "#21262d"], borderWidth: 0, circumference: 360, rotation: -90 }] },
+    options: { responsive: false, cutout: "68%", plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 700, easing: "easeOutQuart" } }
+  });
+}
+
+// ── Annotation plugin ─────────────────────────────────────────────────────
+Chart.register({
+  id: "eventLines",
+  afterDraw(chart) {
+    const { ctx, scales, chartArea } = chart;
+    if (!scales.x || !chart.config.options._events?.length) return;
+    chart.config.options._events.forEach(ev => {
+      const idx = chart.data.labels.indexOf(ev.date);
+      if (idx === -1) return;
+      const x = scales.x.getPixelForValue(idx);
+      ctx.save();
+      ctx.strokeStyle = ev.color || "#8b949e";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(x, chartArea.top); ctx.lineTo(x, chartArea.bottom); ctx.stroke();
+      ctx.restore();
+    });
+  }
+});
+
+Chart.defaults.color = "#8b949e";
+Chart.defaults.borderColor = "#30363d";
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 12;
+
+function baseOpts(labels, evts) {
+  return {
+    responsive: true, maintainAspectRatio: false, _events: evts || [],
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { labels: { color: "#8b949e", boxWidth: 12, padding: 14 } },
+      tooltip: { backgroundColor: "#161b22", borderColor: "#30363d", borderWidth: 1, titleColor: "#e6edf3", bodyColor: "#8b949e", padding: 10 }
+    },
+    scales: {
+      x: { ticks: { maxTicksLimit: 9, maxRotation: 0 }, grid: { color: "#21262d" } },
+      y: { grid: { color: "#21262d" } }
+    }
+  };
+}
+
+// ── Events legend ─────────────────────────────────────────────────────────
+const EVENT_CATEGORY_COLOR = { policy: "#d29922", banking: "#58a6ff", infrastructure: "#3fb950", legal: "#f85149", monetary: "#bc8cff", construction: "#db6d28", price: "#8b949e" };
+
+function renderEventsLegend(containerId, labels, events) {
+  const el = document.getElementById(containerId);
+  if (!el || !events?.length) return;
+  const visible = events.filter(e => labels.includes(e.date) || labels.includes(e.date.slice(0, 7)));
+  if (!visible.length) { el.style.display = "none"; return; }
+  el.innerHTML = `<h3>Key Events</h3><div class="events-grid">${
+    visible.map(e => `<div class="event-item">
+      <div class="event-dot" style="background:${EVENT_CATEGORY_COLOR[e.category] || "#8b949e"}"></div>
+      <div><span class="event-date">${e.date}</span> — ${e.label}</div>
+    </div>`).join("")
+  }</div>`;
+}
+
+// ── Chart registry (so we can destroy on city switch) ─────────────────────
+const chartInstances = {};
+function makeChart(id, type, data, options) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  chartInstances[id] = new Chart(document.getElementById(id), { type, data, options });
+  return chartInstances[id];
+}
+
+// ── Seed data ─────────────────────────────────────────────────────────────
+// Embedded so the file works from file:// without a server.
+const SEED_PRICES = {"source":"Restate.ru","readings":[
+  {"date":"2025-06-10","value":173540,"real":true},{"date":"2025-06-24","value":180626,"real":true},
+  {"date":"2025-07-08","value":182790,"real":true},{"date":"2025-07-22","value":185413,"real":true},
+  {"date":"2025-08-05","value":182770,"real":true},{"date":"2025-08-19","value":176451,"real":true},
+  {"date":"2025-09-02","value":176784,"real":true},{"date":"2025-09-16","value":177135,"real":true},
+  {"date":"2025-09-30","value":176980,"real":true},{"date":"2025-10-14","value":179398,"real":true},
+  {"date":"2025-10-28","value":181180,"real":true},{"date":"2025-11-11","value":178788,"real":true},
+  {"date":"2025-11-25","value":180357,"real":true},{"date":"2025-12-09","value":182567,"real":true},
+  {"date":"2025-12-23","value":208267,"real":true},{"date":"2026-01-14","value":203799,"real":true},
+  {"date":"2026-01-29","value":198079,"real":true},{"date":"2026-02-10","value":195972,"real":true},
+  {"date":"2026-02-24","value":208918,"real":true},{"date":"2026-03-10","value":205592,"real":true},
+  {"date":"2026-03-24","value":218423,"real":true},{"date":"2026-04-07","value":206791,"real":true},
+  {"date":"2026-04-21","value":223020,"real":true},{"date":"2026-05-05","value":251273,"real":true},
+  {"date":"2026-05-19","value":223743,"real":true},{"date":"2026-06-02","value":221332,"real":true}
+]};
+
+const SEED_DEVS = {"cities":{"mariupol_dnr":{"readings":[
+  {"date":"2025-03-01","developers":10,"buildings":16,"sqm_pipeline":121000,"real":true},
+  {"date":"2025-06-01","developers":14,"buildings":25,"sqm_pipeline":193000,"real":false},
+  {"date":"2025-09-01","developers":18,"buildings":38,"sqm_pipeline":280000,"real":false},
+  {"date":"2025-12-01","developers":21,"buildings":52,"sqm_pipeline":370000,"real":false},
+  {"date":"2026-03-01","developers":25,"buildings":68,"sqm_pipeline":472000,"real":true}
+]}}};
+
+const SEED_MORT = {"totals":[
+  {"date":"2024-12-31","three_bank_rub":8400000000,"real":false},
+  {"date":"2025-06-30","three_bank_rub":16000000000,"real":false},
+  {"date":"2025-12-31","three_bank_rub":28300000000,"real":true}
+],"banks":{
+  "PSB":{"portfolio_snapshots":[
+    {"date":"2024-12-31","portfolio_rub":5800000000,"real":true},
+    {"date":"2025-12-31","portfolio_rub":8300000000,"real":true}
+  ]},
+  "Sberbank":{"portfolio_snapshots":[
+    {"date":"2024-12-31","portfolio_rub":2100000000,"real":true},
+    {"date":"2025-12-31","portfolio_rub":11000000000,"real":true}
+  ]},
+  "VTB":{"portfolio_snapshots":[
+    {"date":"2025-03-31","portfolio_rub":500000000,"real":false},
+    {"date":"2025-12-31","portfolio_rub":9000000000,"real":true}
+  ]}
+}};
+
+const SEED_SCORES = {"last_updated":"2026-07-03T20:00:00Z","cities":{
+  "mariupol":{"display_name":"Mariupol","weight":1.0,"history":[
+    {"month":"2025-06","SCI":52,"SCI_lo":48,"SCI_hi":56,"track_a":22,"a_lo":17,"a_hi":27,"track_b":23,"b_lo":19,"b_hi":27,"composite":34,"spread":-11,"data_quality":"estimated"},
+    {"month":"2025-07","SCI":55,"SCI_lo":51,"SCI_hi":59,"track_a":24,"a_lo":19,"a_hi":29,"track_b":23,"b_lo":19,"b_hi":27,"composite":36,"spread":-13,"data_quality":"estimated"},
+    {"month":"2025-08","SCI":58,"SCI_lo":53,"SCI_hi":63,"track_a":25,"a_lo":20,"a_hi":30,"track_b":24,"b_lo":20,"b_hi":28,"composite":38,"spread":-14,"data_quality":"estimated"},
+    {"month":"2025-09","SCI":61,"SCI_lo":56,"SCI_hi":66,"track_a":26,"a_lo":21,"a_hi":31,"track_b":24,"b_lo":20,"b_hi":28,"composite":40,"spread":-16,"data_quality":"estimated"},
+    {"month":"2025-10","SCI":63,"SCI_lo":58,"SCI_hi":68,"track_a":27,"a_lo":22,"a_hi":32,"track_b":24,"b_lo":20,"b_hi":28,"composite":41,"spread":-17,"data_quality":"estimated"},
+    {"month":"2025-11","SCI":65,"SCI_lo":60,"SCI_hi":70,"track_a":28,"a_lo":23,"a_hi":33,"track_b":24,"b_lo":20,"b_hi":28,"composite":43,"spread":-19,"data_quality":"estimated"},
+    {"month":"2025-12","SCI":68,"SCI_lo":63,"SCI_hi":73,"track_a":29,"a_lo":23,"a_hi":35,"track_b":24,"b_lo":20,"b_hi":28,"composite":45,"spread":-21,"data_quality":"mixed"},
+    {"month":"2026-01","SCI":72,"SCI_lo":67,"SCI_hi":77,"track_a":30,"a_lo":24,"a_hi":36,"track_b":24,"b_lo":20,"b_hi":28,"composite":47,"spread":-23,"data_quality":"mixed"},
+    {"month":"2026-02","SCI":75,"SCI_lo":70,"SCI_hi":80,"track_a":30,"a_lo":24,"a_hi":36,"track_b":24,"b_lo":19,"b_hi":29,"composite":48,"spread":-24,"data_quality":"mixed"},
+    {"month":"2026-03","SCI":80,"SCI_lo":75,"SCI_hi":85,"track_a":31,"a_lo":25,"a_hi":37,"track_b":24,"b_lo":19,"b_hi":29,"composite":51,"spread":-27,"data_quality":"mixed"},
+    {"month":"2026-04","SCI":84,"SCI_lo":79,"SCI_hi":89,"track_a":31,"a_lo":25,"a_hi":37,"track_b":24,"b_lo":19,"b_hi":29,"composite":52,"spread":-28,"data_quality":"real"},
+    {"month":"2026-05","SCI":88,"SCI_lo":83,"SCI_hi":93,"track_a":31,"a_lo":25,"a_hi":37,"track_b":24,"b_lo":19,"b_hi":29,"composite":54,"spread":-30,"data_quality":"real"},
+    {"month":"2026-06","SCI":91,"SCI_lo":87,"SCI_hi":95,"track_a":31,"a_lo":25,"a_hi":37,"track_b":24,"b_lo":19,"b_hi":29,"composite":55,"spread":-31,"data_quality":"real"}
+  ]},
+  "donetsk":{"display_name":"Donetsk","weight":1.0,"history":[
+    {"month":"2025-06","SCI":32,"track_a":28,"track_b":52,"composite":30,"spread":22,"data_quality":"estimated"},
+    {"month":"2025-09","SCI":36,"track_a":30,"track_b":54,"composite":32,"spread":22,"data_quality":"estimated"},
+    {"month":"2025-12","SCI":40,"track_a":33,"track_b":56,"composite":36,"spread":20,"data_quality":"estimated"},
+    {"month":"2026-03","SCI":42,"track_a":35,"track_b":58,"composite":38,"spread":20,"data_quality":"mixed"},
+    {"month":"2026-06","SCI":44,"track_a":36,"track_b":58,"composite":39,"spread":19,"data_quality":"real"}
+  ]},
+  "luhansk":{"display_name":"Luhansk","weight":1.0,"history":[
+    {"month":"2025-06","SCI":28,"track_a":26,"track_b":48,"composite":27,"spread":21,"data_quality":"estimated"},
+    {"month":"2025-09","SCI":31,"track_a":28,"track_b":50,"composite":29,"spread":21,"data_quality":"estimated"},
+    {"month":"2025-12","SCI":35,"track_a":30,"track_b":52,"composite":32,"spread":20,"data_quality":"estimated"},
+    {"month":"2026-03","SCI":37,"track_a":32,"track_b":53,"composite":34,"spread":19,"data_quality":"mixed"},
+    {"month":"2026-06","SCI":38,"track_a":33,"track_b":54,"composite":35,"spread":19,"data_quality":"real"}
+  ]},
+  "crimea":{"display_name":"Crimea","weight":1.2,"history":[
+    {"month":"2025-06","SCI":55,"track_a":50,"track_b":43,"composite":52,"spread":-9,"crimea_price_rub_m2":173540,"data_quality":"mixed"},
+    {"month":"2025-07","SCI":56,"track_a":51,"track_b":43,"composite":53,"spread":-10,"crimea_price_rub_m2":184102,"data_quality":"mixed"},
+    {"month":"2025-08","SCI":57,"track_a":52,"track_b":44,"composite":54,"spread":-10,"crimea_price_rub_m2":179611,"data_quality":"mixed"},
+    {"month":"2025-09","SCI":58,"track_a":53,"track_b":44,"composite":55,"spread":-11,"crimea_price_rub_m2":176966,"data_quality":"mixed"},
+    {"month":"2025-10","SCI":58,"track_a":54,"track_b":44,"composite":56,"spread":-12,"crimea_price_rub_m2":180289,"data_quality":"mixed"},
+    {"month":"2025-11","SCI":59,"track_a":55,"track_b":45,"composite":57,"spread":-12,"crimea_price_rub_m2":179573,"data_quality":"mixed"},
+    {"month":"2025-12","SCI":60,"track_a":56,"track_b":45,"composite":58,"spread":-13,"crimea_price_rub_m2":195417,"data_quality":"mixed"},
+    {"month":"2026-01","SCI":61,"track_a":57,"track_b":46,"composite":59,"spread":-13,"crimea_price_rub_m2":200939,"data_quality":"mixed"},
+    {"month":"2026-02","SCI":61,"track_a":57,"track_b":46,"composite":59,"spread":-13,"crimea_price_rub_m2":202445,"data_quality":"mixed"},
+    {"month":"2026-03","SCI":62,"track_a":58,"track_b":46,"composite":60,"spread":-14,"crimea_price_rub_m2":212007,"data_quality":"real"},
+    {"month":"2026-04","SCI":62,"track_a":58,"track_b":46,"composite":60,"spread":-14,"crimea_price_rub_m2":214906,"data_quality":"real"},
+    {"month":"2026-05","SCI":62,"track_a":58,"track_b":47,"composite":60,"spread":-13,"crimea_price_rub_m2":237508,"data_quality":"real"},
+    {"month":"2026-06","SCI":62,"track_a":47,"track_b":33,"composite":53,"spread":-20,"crimea_price_rub_m2":221332,"data_quality":"real","note":"Jun 21 AM: Track A 54→50, composite 57→55, spread −11→−9. Hotel booking collapse confirmed worsening (31% overall, 40% Sevastopol). | Jun 21 PM: Track B 46→38, spread −9→−17. Total civilian fuel access suspension (Aksyonov/Razvozhayev, 9am Jun 21) directly undermines the residential-permanence premise. Composite stays 55 (SCI and Track A unchanged). | Jun 24: Track A 50→47, Track B 38→35, composite 55→53, spread −17→−18. Sevastopol full city blackout after main substation destroyed overnight Jun 23–24. North Crimean Canal railway bridge destroyed (SSO two-phase strike). Black Sea Fleet families evacuating to Novorossiysk. Multi-modal civilian infrastructure failure: fuel + power + transport simultaneously. | Jul 3: Track B 35→33, spread −18→−20. Geographic spread of infrastructure failure confirmed beyond Sevastopol: Armyansk without power and water 2+ days, Feodosia municipal district significant outages, Sevastopol power restored then re-cut within 24 hours. Peninsula-wide failure, not city-specific. 3,500-vehicle queue confirmed at Kerch Bridge (Inkorr Jul 2). Residential permanence premise further eroded by sustained multi-city collapse."}
+  ]},
+  "berdiansk":{"display_name":"Berdiansk","weight":0.7,"history":[
+    {"month":"2025-06","SCI":22,"track_a":18,"track_b":12,"composite":20,"spread":-8,"data_quality":"uncertain"},
+    {"month":"2025-09","SCI":25,"track_a":20,"track_b":13,"composite":22,"spread":-9,"data_quality":"uncertain"},
+    {"month":"2025-12","SCI":28,"track_a":21,"track_b":14,"composite":24,"spread":-10,"data_quality":"uncertain"},
+    {"month":"2026-06","SCI":31,"track_a":22,"track_b":14,"composite":26,"spread":-12,"data_quality":"uncertain"}
+  ]}
+},"key_events":[
+  {"date":"2025-06-01","label":"2% secondary market window closes","category":"policy","significance":"high"},
+  {"date":"2025-07-01","label":"VTB enters occupied territories","category":"banking","significance":"medium"},
+  {"date":"2025-08-22","label":"Berdiansk and Mariupol ports opened to international ships","category":"infrastructure","significance":"medium"},
+  {"date":"2025-08-25","label":"Rosreestr: 550,000 properties registered as ownerless in occupied Ukraine","category":"legal","significance":"high"},
+  {"date":"2025-10-15","label":"2% program extended to end-2030","category":"policy","significance":"high"},
+  {"date":"2026-01-17","label":"Central bank rate cut to 15.5% — sixth consecutive cut","category":"monetary","significance":"medium"},
+  {"date":"2026-02-02","label":"Kommersant: occupied territory mortgages now comparable to Crimea","category":"banking","significance":"high"},
+  {"date":"2026-03-01","label":"ЕИСЖС: DNR 25 developers, 68 buildings (vs 10/16 a year prior)","category":"construction","significance":"high"},
+  {"date":"2026-04-07","label":"Crimea price −5.6% single period","category":"price","significance":"medium"},
+  {"date":"2026-05-05","label":"Crimea peak: 251,273 ₽/m²","category":"price","significance":"medium"},
+  {"date":"2026-05-19","label":"Crimea −12.3% — largest single-period drop in 12 months","category":"price","significance":"high"},
+  {"date":"2026-06-02","label":"Crimea current: 221,332 ₽/m²","category":"price","significance":"low"},
+  {"date":"2026-06-02","label":"Occupied Luhansk imposes 20L/person fuel rationing (gasoline + diesel) — mirrors Crimea restrictions, cites logistics bottlenecks","category":"civilian","significance":"medium"},
+  {"date":"2026-06-03","label":"Russian fuel rationing spreads nationally to 20+ regions including Moscow and St. Petersburg — ~40% of primary refining capacity offline; Crimea crisis is leading edge of national crisis, not isolated","category":"macro","significance":"high"},
+  {"date":"2026-06-05","label":"Ukraine strikes cargo vessels in Mariupol/Berdiansk ports — 5 Azerbaijani crew members killed (BBC)","category":"infrastructure","significance":"medium"},
+  {"date":"2026-06-10","label":"Mariupol port disabled — substations, radar, fuel storage, control tower hit (Azov Corps)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-10","label":"Sevastopol fuel rationing cut to 20L/week (from 20L/day) — worst fuel crisis since 2014","category":"civilian","significance":"high"},
+  {"date":"2026-06-10","label":"Ukrainian drones strike Sevastopol's Panorama Museum alongside Mariupol port and Russian oil refineries — Sevastopol governor Razvozhayev confirms damage","category":"infrastructure","significance":"low"},
+  {"date":"2026-06-11","label":"R-280 corridor traffic down 71% in two weeks — primary GLOC to Crimea via Mariupol/Berdiansk","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-11","label":"Sevastopol fuel rationing coupons fully suspended — tanker trucks unable to reach city after corridor strikes; refueling priority restricted to public transport, utilities, emergency, and government vehicles only","category":"civilian","significance":"high"},
+  {"date":"2026-06-12","label":"Crimea food/fuel crisis confirmed by Ukrainian govt official: гречка/rice/salt/sugar shortages, ~30% dairy self-sufficiency, few weeks of food stock, villa stays for fuel canisters","category":"civilian","significance":"high"},
+  {"date":"2026-06-18","label":"Ukraine strikes Moscow Kapotnya oil refinery — second hit in one week, four airports halted; fuel rationing confirmed in 53 Russian regions; crude processing at 21-year low per Energy Intelligence","category":"macro","significance":"high"},
+  {"date":"2026-06-18","label":"555-drone attack: Kapotnya refinery struck second time in one week, Gukovo oil depot hit, four Moscow airports halted, five refinery locations damaged — ISW confirms fires at combined oil refining unit and oil tank farm","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-18","label":"Russia begins importing gasoline from Asia by sea — first time; previously managed domestic supply without imports in 2025, confirming 2026 shortage is materially worse. ~33% of refining capacity offline before this attack.","category":"macro","significance":"high"},
+  {"date":"2026-06-18","label":"Putin signs FEZ investment threshold reduction 30%→10% across occupied Donetsk, Luhansk, Zaporizhzhia, Kherson — explicit legislative acknowledgment that private investment attraction has failed","category":"policy","significance":"high"},
+  {"date":"2026-06-22","label":"North Crimean Canal railway bridge destroyed — SSO two-phase strike (initial strike + follow-up destroyed repair equipment); SSO: 'bridge no longer exists'","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-23","label":"Sevastopol full city blackout — main substation (330/220/110/35 kV) destroyed overnight Jun 23–24; public transport curfew 10pm, shops close 8pm, summer camps suspended to Sep 1","category":"civilian","significance":"high"},
+  {"date":"2026-06-23","label":"Black Sea Fleet families evacuating Crimea to Novorossiysk — traffic jams in both directions on Kerch Bridge; bridge closed 5+ hours after Kerch port oil depot fires","category":"military","significance":"high"},
+  {"date":"2026-06-23","label":"Russian fuel crisis reaches Siberia — Omsk caps purchases at 40L, Irkutsk in 'manual mode' rationing, Novosibirsk, Kamchatka, Yakutia join ban list; at least 15 regions now rationing","category":"macro","significance":"high"},
+  {"date":"2026-06-23","label":"Moscow Exchange −5%, ruble past 75/dollar (weakest since May 6), Gazprom shares below 100 rubles (lowest since 2009), OFZ bond prices fall — market reaction to deepening fuel/energy crisis","category":"macro","significance":"high"},
+  {"date":"2026-06-23","label":"Orenburg Gazprom gas processing plant struck overnight Jun 23–24 — accounts for 60% of Gazprom Pererabotka gas processing capacity; Russia's only helium plant hit; 1,200km from front","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"R-280 Novorossiya highway closed km 317–331 (occupied Zaporizhzhia) after Ukrainian drone strikes — primary land supply corridor to Crimea via Mariupol/Berdiansk; traffic diverted through villages","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"Three bridges struck overnight Jun 24–25: road bridge over Korsak River (Zaporizhzhia), railway bridges over Aidar and Luhanchyk rivers (Luhansk Oblast)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"Ukraine launches SBU-authorized 40-day intermediate and long-range strike operation — Jun 26 strikes hit two cable ships, ferry near Kerch, multiple Crimea substations, Kerch airfield (ISW Jun 26)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"NORSI refinery halted — Russia's 4th largest (Kstovo, Nizhny Novgorod), CDU-5 primary refining unit damaged, 15M ton/year capacity offline (Reuters/Ukrainska Pravda Jun 25)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"Ufa dual-refinery strikes: Bashneft-Novoil and Bashneft-Ufaneftekhim — combined 10.5M tons annual processing capacity (OSINT/ISW Jun 26)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-25","label":"Fuel rationing confirmed in at least 56 Russian regions (up from 53); Moscow Oil Refinery offline minimum 6 months after Jun 16/18 attacks (EA WorldView Jun 25)","category":"macro","significance":"high"},
+  {"date":"2026-06-25","label":"Russia negotiating emergency gasoline imports from Kazakhstan (~50,000 MT) and drafting tax subsidies for India imports — unprecedented; domestic production gap cannot be closed by existing measures (Reuters/Counteroffensive Jun 25)","category":"macro","significance":"high"},
+  {"date":"2026-06-25","label":"Baltic/Black Sea crude loadings on track for record ~2.7M bpd in June (up from 2.5M May) — damaged refineries redirecting unprocessed crude to export markets (Energy News Pro/Inkorr Jun 25)","category":"macro","significance":"medium"},
+  {"date":"2026-06-25","label":"Public transit suspended in occupied Crimea and four Russian oblasts (Zabaikalsky, Kaluga, Rostov, Tula) due to diesel shortages (NV Ukraine/Agentstvo Jun 25)","category":"civilian","significance":"high"},
+  {"date":"2026-06-25","label":"Satellite imagery confirms kilometer-long vehicle queues exiting Crimea via Kerch Bridge (Kyiv Independent Jun 25)","category":"civilian","significance":"high"},
+  {"date":"2026-06-26","label":"Aksyonov and Razvozhayev sign formal state of emergency decrees in occupied Crimea and Sevastopol — primarily to streamline supply procurement and bypass bureaucratic restrictions on energy restoration (ISW Jun 26)","category":"civilian","significance":"high"},
+  {"date":"2026-06-26","label":"TES fuel network employees formally petition Putin for company rescue from collapse — signals fuel retail infrastructure financially failing, not merely constrained (Inkorr Jun 26)","category":"civilian","significance":"medium"},
+  {"date":"2026-06-26","label":"PSB: more branches per capita in occupied Ukraine than Moscow Oblast; 2,000 small business loans approved in occupied Zaporizhzhia H1 2026, up 50% YoY — state financial infrastructure deepening as physical infrastructure collapses (ISW Jun 25)","category":"banking","significance":"medium"},
+  {"date":"2026-06-27","label":"Ukraine FIS reports internal Russian documents showing near-daily governance failures in occupied Crimea; over 80% of Russians reportedly consider large-scale economic crisis inevitable [unverified — Ukrainian intelligence source] (ISW Jun 26)","category":"macro","significance":"medium"},
+  {"date":"2026-06-27","label":"WATCH: reports of Russian military forces transitioning from formal tenancy/subsidized purchase toward commandeering civilian property for billeting in some occupied areas — pattern across multiple digest inputs, no single named-source confirmation (monitor watch condition)","category":"civilian","significance":"medium"},
+  {"date":"2026-06-28","label":"Putin publicly admits Crimea has ‘only days’ of fuel reserves and Russia is ‘going through a difficult period’ — first presidential-level confirmation of acute Crimea supply crisis; pledges increased land and sea deliveries (Guardian Jun 29, Reuters Jun 29)","category":"civilian","significance":"high"},
+  {"date":"2026-06-28","label":"Slavyansk-na-Kubani refinery struck (Krasnodar Krai) — ~4M ton/year capacity, named key Crimea fuel supplier; fire ongoing Jun 29; Yaroslavl refinery struck same night (ABC News/AP Jun 28, Kyiv Independent Jun 29)","category":"infrastructure","significance":"high"},
+  {"date":"2026-06-29","label":"ISW confirms Mariupol as epicenter of Russia’s resettlement campaign — Russian citizens relocated into city as Russification strategy; coercive passportization pressure confirmed across all occupied oblasts (ISW Jun 29, Just Security Jun 29)","category":"policy","significance":"medium"},
+  {"date":"2026-07-01","label":"Donetsk–Mariupol highway bridge near Kremenivka/Hranitne destroyed — multiple spans collapsed, route fully blocked, Russian logistics rerouted +15–20km; second bridge near Novoazovsk on R-280 also partially collapsed same day (Moscow Times/Militarnyi Jul 1)","category":"infrastructure","significance":"high"},
+  {"date":"2026-07-01","label":"Ukrainian MoD discloses June 2026 DeepStrike campaign: 11 refineries, 7 fuel logistics facilities, 8 defense-industrial enterprises struck; maximum confirmed range 2,000+km (Ukrainian MoD via United24/Ukrinform Jul 1)","category":"infrastructure","significance":"high"},
+  {"date":"2026-07-01","label":"Russia crude oil processing fell 25% YoY to 3.95M bpd in June — lowest level in over two decades (AP/Economic Times Jul 1)","category":"macro","significance":"high"},
+  {"date":"2026-07-01","label":"Bloomberg: Russian seaborne crude exports hit record 4.13M bpd in June while gross export revenues fell to $1.9B/week (lowest since March 2026) — volume cannot compensate for price collapse; refineries redirecting unprocessed crude to export (ISW Jul 1)","category":"macro","significance":"high"},
+  {"date":"2026-07-01","label":"Russia begins importing refined gasoline from India for first time — 60,000–80,000 MT en route, plans for 400,000 MT/month from multiple countries (Reuters/ISW Jul 1)","category":"macro","significance":"high"},
+  {"date":"2026-07-01","label":"Armyansk without power and water 2+ days; Feodosia municipal district significant outages; Sevastopol power restored then re-cut within 24 hours — infrastructure failure now peninsula-wide, not city-specific (ISW Jul 1)","category":"civilian","significance":"high"},
+  {"date":"2026-07-01","label":"Occupied Luhansk social fund pays 880,000 rubles to six Far North residents for relocation to occupied territory — monetary incentives for Russian civilian resettlement deepening (ISW Jul 2)","category":"policy","significance":"medium"},
+  {"date":"2026-07-01","label":"’Zemsky Teacher’ program recruits Russian teachers to occupied Kherson Oblast at 2M rubles each — Russification through institutional staffing (ISW Jul 2)","category":"policy","significance":"medium"},
+  {"date":"2026-07-01","label":"USF 48-hour operation Jul 1–2 disables 13 energy targets: 10 electrical substations in occupied Crimea, one each in occupied Luhansk and Donetsk oblasts, gas distribution station near Aidar (USF Commander Brovdi/Kyiv Independent Jul 2)","category":"infrastructure","significance":"high"},
+  {"date":"2026-07-02","label":"NORSI refinery (Kstovo, Nizhny Novgorod) struck second time in 8 days — AVT-6 primary crude unit on fire; CDU-5 unit was knocked offline in Jun 24 strike; facility now multiply degraded (Euromaidan Press/ISW Jul 2)","category":"infrastructure","significance":"high"},
+  {"date":"2026-07-02","label":"Sevastopol actual pump price reaches 199 rubles/liter (Kommersant Jul 2) — nearly double official Rosstat figure of 118.79 rubles/liter; Razvozhayev confirms rationing continues minimum one more month","category":"civilian","significance":"high"},
+  {"date":"2026-07-02","label":"Bilohirsk quarry (occupied Crimea) halts operations entirely due to fuel absence — first confirmed industrial production shutdown attributable to fuel crisis (RFE/RL/ISW Jul 2)","category":"civilian","significance":"high"}
+]};
+
+const SEED_PERM = {"alert_thresholds":{"critical_below":50,"warning_below":65,"stable_above":75},"cities":{
+  "mariupol":{"adjustment_factor":0.18,"buy_monthly_payment_rub":19800,"typical_rent_rub":20000,
+    "monthly_readings":[
+      {"month":"2025-06","mortgage_originations_est":45,"rental_listings_est":180,"local_mortgage_adj":8,"ratio":27,"real":false},
+      {"month":"2025-07","mortgage_originations_est":52,"rental_listings_est":195,"local_mortgage_adj":9,"ratio":28,"real":false},
+      {"month":"2025-08","mortgage_originations_est":61,"rental_listings_est":210,"local_mortgage_adj":11,"ratio":30,"real":false},
+      {"month":"2025-09","mortgage_originations_est":58,"rental_listings_est":220,"local_mortgage_adj":10,"ratio":28,"real":false},
+      {"month":"2025-10","mortgage_originations_est":65,"rental_listings_est":215,"local_mortgage_adj":12,"ratio":30,"real":false},
+      {"month":"2025-11","mortgage_originations_est":70,"rental_listings_est":225,"local_mortgage_adj":13,"ratio":31,"real":false},
+      {"month":"2025-12","mortgage_originations_est":82,"rental_listings_est":230,"local_mortgage_adj":15,"ratio":33,"real":false},
+      {"month":"2026-01","mortgage_originations_est":95,"rental_listings_est":240,"local_mortgage_adj":17,"ratio":34,"real":false},
+      {"month":"2026-02","mortgage_originations_est":88,"rental_listings_est":235,"local_mortgage_adj":16,"ratio":32,"real":false},
+      {"month":"2026-03","mortgage_originations_est":92,"rental_listings_est":242,"local_mortgage_adj":17,"ratio":33,"real":false},
+      {"month":"2026-04","mortgage_originations_est":85,"rental_listings_est":238,"local_mortgage_adj":15,"ratio":32,"real":false},
+      {"month":"2026-05","mortgage_originations_est":90,"rental_listings_est":245,"local_mortgage_adj":16,"ratio":33,"real":false},
+      {"month":"2026-06","ratio":null,"real":false,"note":"Awaiting live Avito fetch"}
+    ]},
+  "donetsk":{"adjustment_factor":1.0,"buy_monthly_payment_rub":4500,"typical_rent_rub":17000,"rent_premium_over_buy":12500,
+    "monthly_readings":[
+      {"month":"2025-06","mortgage_originations_est":28,"rental_listings_est":95,"ratio":57,"real":false},
+      {"month":"2025-07","mortgage_originations_est":30,"rental_listings_est":98,"ratio":57,"real":false},
+      {"month":"2025-08","mortgage_originations_est":31,"rental_listings_est":102,"ratio":56,"real":false},
+      {"month":"2025-09","mortgage_originations_est":29,"rental_listings_est":105,"ratio":55,"real":false},
+      {"month":"2025-10","mortgage_originations_est":33,"rental_listings_est":108,"ratio":57,"real":false},
+      {"month":"2025-11","mortgage_originations_est":35,"rental_listings_est":110,"ratio":57,"real":false},
+      {"month":"2025-12","mortgage_originations_est":40,"rental_listings_est":112,"ratio":58,"real":false},
+      {"month":"2026-01","mortgage_originations_est":42,"rental_listings_est":115,"ratio":57,"real":false},
+      {"month":"2026-02","mortgage_originations_est":38,"rental_listings_est":118,"ratio":56,"real":false},
+      {"month":"2026-03","mortgage_originations_est":41,"rental_listings_est":120,"ratio":55,"real":false},
+      {"month":"2026-04","mortgage_originations_est":39,"rental_listings_est":122,"ratio":55,"real":false},
+      {"month":"2026-05","mortgage_originations_est":40,"rental_listings_est":125,"ratio":55,"real":false},
+      {"month":"2026-06","ratio":null,"real":false,"note":"Awaiting live Avito fetch"}
+    ]},
+  "luhansk":{"adjustment_factor":1.0,"buy_monthly_payment_rub":3900,"typical_rent_rub":15000,"rent_premium_over_buy":11100,
+    "monthly_readings":[
+      {"month":"2025-06","mortgage_originations_est":22,"rental_listings_est":75,"ratio":62,"real":false},
+      {"month":"2025-07","mortgage_originations_est":23,"rental_listings_est":78,"ratio":61,"real":false},
+      {"month":"2025-08","mortgage_originations_est":24,"rental_listings_est":80,"ratio":60,"real":false},
+      {"month":"2025-09","mortgage_originations_est":22,"rental_listings_est":82,"ratio":59,"real":false},
+      {"month":"2025-10","mortgage_originations_est":25,"rental_listings_est":84,"ratio":60,"real":false},
+      {"month":"2025-11","mortgage_originations_est":26,"rental_listings_est":85,"ratio":60,"real":false},
+      {"month":"2025-12","mortgage_originations_est":30,"rental_listings_est":87,"ratio":61,"real":false},
+      {"month":"2026-01","mortgage_originations_est":32,"rental_listings_est":88,"ratio":62,"real":false},
+      {"month":"2026-02","mortgage_originations_est":29,"rental_listings_est":90,"ratio":61,"real":false},
+      {"month":"2026-03","mortgage_originations_est":31,"rental_listings_est":91,"ratio":60,"real":false},
+      {"month":"2026-04","mortgage_originations_est":30,"rental_listings_est":93,"ratio":60,"real":false},
+      {"month":"2026-05","mortgage_originations_est":31,"rental_listings_est":94,"ratio":59,"real":false},
+      {"month":"2026-06","ratio":null,"real":false,"note":"Awaiting live Avito fetch"}
+    ]},
+  "crimea":{"adjustment_factor":0.55,"buy_monthly_payment_rub":19800,"typical_rent_rub":35000,
+    "monthly_readings":[
+      {"month":"2025-06","mortgage_originations_est":180,"rental_listings_est":420,"local_mortgage_adj":99,"ratio":54,"real":false},
+      {"month":"2025-07","mortgage_originations_est":175,"rental_listings_est":380,"local_mortgage_adj":96,"ratio":56,"real":false},
+      {"month":"2025-08","mortgage_originations_est":168,"rental_listings_est":360,"local_mortgage_adj":92,"ratio":56,"real":false},
+      {"month":"2025-09","mortgage_originations_est":155,"rental_listings_est":290,"local_mortgage_adj":85,"ratio":57,"real":false},
+      {"month":"2025-10","mortgage_originations_est":162,"rental_listings_est":245,"local_mortgage_adj":89,"ratio":59,"real":false},
+      {"month":"2025-11","mortgage_originations_est":158,"rental_listings_est":230,"local_mortgage_adj":87,"ratio":59,"real":false},
+      {"month":"2025-12","mortgage_originations_est":172,"rental_listings_est":220,"local_mortgage_adj":95,"ratio":62,"real":false},
+      {"month":"2026-01","mortgage_originations_est":185,"rental_listings_est":215,"local_mortgage_adj":102,"ratio":65,"real":false},
+      {"month":"2026-02","mortgage_originations_est":178,"rental_listings_est":218,"local_mortgage_adj":98,"ratio":63,"real":false},
+      {"month":"2026-03","mortgage_originations_est":170,"rental_listings_est":225,"local_mortgage_adj":94,"ratio":61,"real":false},
+      {"month":"2026-04","mortgage_originations_est":162,"rental_listings_est":235,"local_mortgage_adj":89,"ratio":59,"real":false},
+      {"month":"2026-05","mortgage_originations_est":155,"rental_listings_est":250,"local_mortgage_adj":85,"ratio":57,"real":false},
+      {"month":"2026-06","ratio":null,"real":false,"note":"Awaiting live Avito fetch"}
+    ]},
+  "berdiansk":{"adjustment_factor":0.25,
+    "monthly_readings":[
+      {"month":"2025-06","ratio":22,"real":false},
+      {"month":"2025-09","ratio":23,"real":false},
+      {"month":"2025-12","ratio":24,"real":false},
+      {"month":"2026-06","ratio":null,"real":false}
+    ]}
+}};
+
+// RPI sub-indicators: ±2–4pt noise added around linear trend, composites recomputed
+const SEED_RPI = {"monthly_readings":[
+  {"month":"2025-06","capacity_util_pct":76,"capacity_pressure":24,"strike_score":33,"export_pressure":21,"RPI":26,"real":false},
+  {"month":"2025-07","capacity_util_pct":78,"capacity_pressure":22,"strike_score":35,"export_pressure":19,"RPI":25,"real":false},
+  {"month":"2025-08","capacity_util_pct":71,"capacity_pressure":29,"strike_score":46,"export_pressure":26,"RPI":34,"real":false},
+  {"month":"2025-09","capacity_util_pct":74,"capacity_pressure":26,"strike_score":43,"export_pressure":23,"RPI":31,"real":false},
+  {"month":"2025-10","capacity_util_pct":69,"capacity_pressure":31,"strike_score":51,"export_pressure":32,"RPI":38,"real":false},
+  {"month":"2025-11","capacity_util_pct":73,"capacity_pressure":27,"strike_score":49,"export_pressure":28,"RPI":35,"real":false},
+  {"month":"2025-12","capacity_util_pct":68,"capacity_pressure":32,"strike_score":58,"export_pressure":34,"RPI":41,"real":false},
+  {"month":"2026-01","capacity_util_pct":65,"capacity_pressure":35,"strike_score":54,"export_pressure":32,"RPI":40,"real":false},
+  {"month":"2026-02","capacity_util_pct":69,"capacity_pressure":31,"strike_score":62,"export_pressure":38,"RPI":44,"real":false},
+  {"month":"2026-03","capacity_util_pct":63,"capacity_pressure":37,"strike_score":59,"export_pressure":34,"RPI":43,"real":false},
+  {"month":"2026-04","capacity_util_pct":66,"capacity_pressure":34,"strike_score":67,"export_pressure":40,"RPI":47,"real":false},
+  {"month":"2026-05","capacity_util_pct":62,"capacity_pressure":38,"strike_score":63,"export_pressure":37,"RPI":46,"real":false},
+  {"month":"2026-06","capacity_util_pct":null,"capacity_pressure":null,"strike_score":88,"export_pressure":77,"RPI":97,"real":true,"real_components":["strike_score","export_pressure"],"partial":true,"structural_event":true,"note":"STRUCTURAL EVENT: June 18 — 555-drone attack, Kapotnya second hit, Gukovo depot, four airports halted, five refinery sites damaged. Russia begins Asian gasoline imports — first time, confirms 2026 materially worse than 2025. Jun 21: gas storage (Hlibivske), thermal power plant (Tavriyska), compression stations struck — new target categories expanding beyond pure refinery. Jun 23–24: Sevastopol main substation destroyed (full city blackout). Simferopol TPP struck. Gazprom Pererabotka Orenburg plant struck (60% of GPP gas processing capacity, 1,200km from front). Russia's only helium plant hit. Kerch Bridge closed 5+ hours. Front-line fuel shortages operationally confirmed: ISW reports Hulyaipole sector troops walking 50km on foot, reconnaissance drone activity down two-thirds. Sources: ISW Jun 18, RFE/RL Jun 18, Energy Intelligence, Antikor/UNN Jun 24, ISW Jun 23. | Jun 25–27: NORSI refinery (Russia's 4th largest, Kstovo/Nizhny Novgorod) halted after CDU-5 unit strike — 15M ton/year capacity offline. Ufa dual-refinery strikes (Bashneft-Novoil + Bashneft-Ufaneftekhim) — combined 10.5M tons annual capacity. Russia negotiating emergency gasoline imports from Kazakhstan (~50,000 MT) and drafting tax subsidies for India imports — unprecedented. Diesel export ban under consideration (Novak, Jun 26). Fuel rationing now confirmed in at least 56 regions (up from 53). Moscow Oil Refinery offline for minimum 6 months. Paradox: damaged refineries redirecting unprocessed crude to export — Baltic/Black Sea crude loadings on track for record ~2.7M bpd June. Sources: Reuters/Ukrainska Pravda Jun 25, Mezha.net Jun 26, ISW Jun 26, EA WorldView Jun 25. | Jun 28–30: Slavyansk-na-Kubani refinery struck overnight Jun 28 (Krasnodar Krai) — ~4M ton/year capacity, named key Crimea fuel supplier, fire ongoing Jun 29. Yaroslavl refinery struck same night. Novorossiysk area drone activity overnight Jun 29–30, explosions near seaport. Russian gasoline production confirmed ~25% below year-on-year; 25–33% of total refining capacity offline. Trucking tariffs on M-14 Crimea highway up minimum 10% from Jul 1; cargo transport costs 260,000–500,000 roubles per load. Sources: ABC News/AP Jun 28, Kyiv Independent Jun 29, Censor.NET Jun 30. | Jul 1–3: Ukrainian MoD discloses June DeepStrike campaign: 11 refineries, 7 fuel logistics facilities, 8 defense-industrial enterprises, max range 2,000+km. Russia crude processing 3.95M bpd in June — 25% YoY decline, lowest in over 2 decades (AP Jul 1). Bloomberg: seaborne crude exports record 4.13M bpd but gross export revenues $1.9B/week (lowest since March 2026) — volume cannot compensate for price. NORSI Kstovo struck second time Jul 2 (AVT-6 unit, 8 days after CDU-5 strike). Donetsk–Mariupol highway bridge near Kremenivka destroyed Jul 1 (multiple spans, +15–20km detour). USF 48-hour operation Jul 1–2 disables 13 energy targets across Crimea/Luhansk/Donetsk. Russia importing refined gasoline from India for first time (400,000 MT/month planned). Sources: Ukrainian MoD Jul 1, Bloomberg/ISW Jul 1, Euromaidan Press/ISW Jul 2, Kyiv Independent Jul 2."}
+],"alert_thresholds":{"critical_above":70,"warning_above":50,"watch_above":35}};
+
+// CCI sub-indicators: ±2–4pt noise added around linear trend, composites recomputed
+const SEED_CCI = {"monthly_readings":[
+  {"month":"2025-06","fuel_price_premium_pct":4,"fuel_score":22,"panic_keyword_score":10,"avito_premium_score":8,"CCI":13,"real":false,"note":"Baseline period — low stress"},
+  {"month":"2025-07","fuel_price_premium_pct":5,"fuel_score":23,"panic_keyword_score":7,"avito_premium_score":5,"CCI":12,"real":false},
+  {"month":"2025-08","fuel_price_premium_pct":7,"fuel_score":34,"panic_keyword_score":14,"avito_premium_score":10,"CCI":19,"real":false},
+  {"month":"2025-09","fuel_price_premium_pct":6,"fuel_score":32,"panic_keyword_score":12,"avito_premium_score":8,"CCI":17,"real":false},
+  {"month":"2025-10","fuel_price_premium_pct":9,"fuel_score":42,"panic_keyword_score":19,"avito_premium_score":15,"CCI":25,"real":false},
+  {"month":"2025-11","fuel_price_premium_pct":8,"fuel_score":42,"panic_keyword_score":16,"avito_premium_score":12,"CCI":23,"real":false},
+  {"month":"2025-12","fuel_price_premium_pct":11,"fuel_score":53,"panic_keyword_score":25,"avito_premium_score":19,"CCI":32,"real":false},
+  {"month":"2026-01","fuel_price_premium_pct":10,"fuel_score":53,"panic_keyword_score":22,"avito_premium_score":17,"CCI":31,"real":false},
+  {"month":"2026-02","fuel_price_premium_pct":13,"fuel_score":64,"panic_keyword_score":29,"avito_premium_score":23,"CCI":39,"real":false},
+  {"month":"2026-03","fuel_price_premium_pct":12,"fuel_score":62,"panic_keyword_score":27,"avito_premium_score":20,"CCI":36,"real":false},
+  {"month":"2026-04","fuel_price_premium_pct":15,"fuel_score":73,"panic_keyword_score":34,"avito_premium_score":27,"CCI":45,"real":false},
+  {"month":"2026-05","fuel_price_premium_pct":14,"fuel_score":72,"panic_keyword_score":32,"avito_premium_score":25,"CCI":43,"real":false},
+  {"month":"2026-06","fuel_price_premium_pct":null,"fuel_score":92,"panic_keyword_score":75,"avito_premium_score":65,"CCI":100,"real":true,"structural_event":true,"first_critical_reading":true,"note":"Jun 21 AM: CCI 81→87. Crimea-specific compounding: 20L/car rationing, gas storage strike threatens winter heating, hotel bookings down 31%/40% Sevastopol. | Jun 21 PM: CCI 87→94. Total civilian fuel sales suspension, Crimea and Sevastopol, effective 9am Jun 21 — cash, card, and coupon sales to individuals and legal entities fully halted. Fuel restricted to state security/essential-service agencies only (Aksyonov, Razvozhayev). Categorically worse than prior 20L/week rationing regime. Sources: NPR, Bloomberg, Euronews, RFE/RL, Meduza, Kyiv Post, all Jun 21. | Jun 24: CCI 94→100 (INDEX CEILING). Sevastopol full city blackout overnight Jun 23–24 after main substation destroyed. Public transport curfew 10pm. Large shops close 8pm. Children's summer camps suspended to Sep 1. Nighttime motorcycle ban. Black Sea Fleet families evacuating to Novorossiysk. Russian fuel crisis reaches Siberia (Omsk, Irkutsk, Novosibirsk, Kamchatka rationing). Moscow Exchange −5%, ruble past 75/dollar (weakest since May 6), Gazprom shares below 100 rubles (lowest since 2009). Multi-modal collapse: fuel + power + transport + market confidence simultaneously. Sources: Reuters Jun 23, Antikor/UNN Jun 24, Al Jazeera Jun 23, Vijesti Jun 24. | Jun 25–27: CCI holds at 100 (ceiling). Formal state of emergency decrees signed by Aksyonov and Razvozhayev Jun 26 — administrative confirmation that normal governance has failed. Empty store shelves confirmed (CNN/Mezha.net Jun 26). Grey market fuel only option. TES fuel network employees petition Putin for company rescue from collapse (Inkorr Jun 26). Water supply affected at North Crimean Canal state water enterprise due to power outages (ISW Jun 25). Sevastopol household electricity curbs, mandatory early shop closures, public transit banned after 10pm. Public transit suspended in occupied Crimea and four Russian oblasts (Zabaikalsky, Kaluga, Rostov, Tula). Satellite imagery confirms kilometer-long vehicle queues exiting via Kerch Bridge. Conditions have not stabilized — ceiling means model sensitivity in this dimension is exhausted, not that deterioration has stopped. | Jul 1–3: CCI holds at 100 (ceiling). Sevastopol actual pump price 199 rubles/liter (Kommersant Jul 2) — nearly double official Rosstat figure of 118.79; rationing confirmed minimum one more month (Razvozhayev). Armyansk without power and water 2+ days; Feodosia significant outages; Sevastopol power restored then re-cut within 24 hours of restoration — infrastructure not stabilizing. Bilohirsk quarry (occupied Crimea) halts operations due to fuel absence — first confirmed industrial production shutdown attributable to fuel crisis (RFE/RL/ISW Jul 2). 3,500-vehicle queue at Kerch Bridge confirmed Jul 2. Crisis now causing economic production failure, not only civilian mobility disruption."}
+],"alert_thresholds":{"critical_above":65,"warning_above":45,"watch_above":25}};
+
+// OFP sub-indicators: export revenue proxy, NWF liquid %GDP, OFZ debt stress, regional cuts, shadow fleet stress
+const SEED_OFP = {"monthly_readings":[
+  {"month":"2025-06","export_revenue_proxy":20,"nwf_liquid_pct_gdp_score":15,"ofz_debt_stress":15,"regional_budget_cuts":10,"shadow_fleet_stress":10,"OFP":15,"real":false,"note":"Baseline period — NWF intact, export revenue near pre-war levels with manageable discount"},
+  {"month":"2025-09","export_revenue_proxy":28,"nwf_liquid_pct_gdp_score":22,"ofz_debt_stress":20,"regional_budget_cuts":10,"shadow_fleet_stress":15,"OFP":22,"real":false},
+  {"month":"2025-12","export_revenue_proxy":35,"nwf_liquid_pct_gdp_score":30,"ofz_debt_stress":28,"regional_budget_cuts":15,"shadow_fleet_stress":20,"OFP":30,"real":false},
+  {"month":"2026-03","export_revenue_proxy":45,"nwf_liquid_pct_gdp_score":42,"ofz_debt_stress":38,"regional_budget_cuts":25,"shadow_fleet_stress":28,"OFP":40,"real":false},
+  {"month":"2026-06","export_revenue_proxy":55,"nwf_liquid_pct_gdp_score":55,"ofz_debt_stress":57,"regional_budget_cuts":48,"shadow_fleet_stress":35,"OFP":54,"real":true,"partial":true,"note":"Jun 24: OFP initialized at 54. Export revenue proxy: seaborne exports down ~15% Jun vs May, Urals-Brent spread ~$13-15 (~score 55). NWF liquid portion ~2.5-3% of GDP, down from ~8% pre-war (~score 55). OFZ prices fell Jun 23-24, ruble past 75/dollar (~score 57). Regional cuts: national fiscal stress evident but no confirmed direct occupation transfer cuts yet (~score 48). Shadow fleet: ongoing but no acute new enforcement event (~score 35). OFP modulator applies +2 to MTCS (band: 41-55). Hormuz MOU (Jun 2026) ambiguous — Iranian supply return could soften Urals price realization; monitoring export revenue proxy for response. Sources: Reuters Jun 23, Minfin NWF disclosures, Kpler/Reuters export data."}
+],"component_weights":{"export_revenue_proxy":0.30,"nwf_liquid_pct_gdp_score":0.25,"ofz_debt_stress":0.20,"regional_budget_cuts":0.15,"shadow_fleet_stress":0.10},"ofp_modulator_thresholds":{"0_to_40":0,"41_to_55":2,"56_to_70":4,"71_to_85":6,"86_to_100":8},"alert_thresholds":{"critical_above":70,"warning_above":50,"watch_above":35}};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let PRICES, DEVS, MORT, SCORES, PERM, DOMCLICK, RPI, CCI_DATA, OFP_DATA;
+let activeCityKey = "mariupol";
+let activeViewMonth = null; // null = latest; "YYYY-MM" = historical view
+
+// Return [entry, prevEntry] from a sorted-by-month array, filtered to entries
+// where arr[i][key] != null, capped at viewMonth (or latest if null).
+function histAt(arr, key, viewMonth) {
+  const valid = (arr || []).filter(r => r[key] != null);
+  if (!valid.length) return [null, null];
+  if (!viewMonth) return [valid[valid.length - 1], valid.length > 1 ? valid[valid.length - 2] : null];
+  const idx = valid.reduce((best, r, i) => r.month <= viewMonth ? i : best, -1);
+  if (idx < 0) return [null, null];
+  return [valid[idx], idx > 0 ? valid[idx - 1] : null];
+}
+
+// Same for city history arrays (keyed by .month directly)
+function cityHistAt(hist, viewMonth) {
+  if (!hist || !hist.length) return [null, null];
+  if (!viewMonth) return [hist[hist.length - 1], hist.length > 1 ? hist[hist.length - 2] : null];
+  const idx = hist.reduce((best, r, i) => r.month <= viewMonth ? i : best, -1);
+  if (idx < 0) return [null, null];
+  return [hist[idx], idx > 0 ? hist[idx - 1] : null];
+}
+
+// ── Loader ────────────────────────────────────────────────────────────────
+async function fetchJSON(path, seed) {
+  try {
+    const r = await fetch(path);
+    if (r.ok) return await r.json();   // await so JSON parse errors stay in try-catch
+  } catch (_) {}
+  return seed;
+}
+
+// ── Dials update ──────────────────────────────────────────────────────────
+function updateDials(cityKey) {
+  const cityData = SCORES.cities[cityKey];
+  if (!cityData) return;
+  const hist = cityData.history;
+  const [latest, prev] = cityHistAt(hist, activeViewMonth);
+
+  drawGauge("gauge-sci", latest.SCI,     sciColor(latest.SCI));
+  drawGauge("gauge-ta",  latest.track_a, trackAColor(latest.track_a));
+  drawGauge("gauge-tb",  latest.track_b, trackBColor(latest.track_b));
+
+  document.getElementById("sci-val").textContent = latest.SCI;
+  document.getElementById("ta-val").textContent  = latest.track_a;
+  document.getElementById("tb-val").textContent  = latest.track_b;
+  document.getElementById("spread-val").textContent = (latest.spread >= 0 ? "+" : "") + latest.spread;
+
+  document.getElementById("sci-val").style.color    = sciColor(latest.SCI);
+  document.getElementById("ta-val").style.color     = trackAColor(latest.track_a);
+  document.getElementById("tb-val").style.color     = trackBColor(latest.track_b);
+  document.getElementById("spread-val").style.color = spreadColor(latest.spread);
+
+  // Confidence bands
+  document.getElementById("sci-band").textContent  = latest.SCI_lo != null ? `${latest.SCI_lo}–${latest.SCI_hi}` : "";
+  document.getElementById("ta-band").textContent   = latest.a_lo  != null ? `${latest.a_lo}–${latest.a_hi}`   : "";
+  document.getElementById("tb-band").textContent   = latest.b_lo  != null ? `${latest.b_lo}–${latest.b_hi}`   : "";
+
+  function chg(elId, curr, pr, key) {
+    const el = document.getElementById(elId);
+    if (!pr || pr[key] == null) { el.textContent = ""; return; }
+    const d = curr[key] - pr[key];
+    if (d === 0) { el.textContent = "Stable"; el.className = "dial-change"; return; }
+    el.textContent = (d > 0 ? "▲ +" : "▼ ") + d.toFixed(0);
+    el.className = "dial-change " + (d > 0 ? "up" : "down");
+  }
+  chg("sci-chg",    latest, prev, "SCI");
+  chg("ta-chg",     latest, prev, "track_a");
+  chg("tb-chg",     latest, prev, "track_b");
+  chg("spread-chg", latest, prev, "spread");
+
+
+  // ── Alert system: severity + new-this-update detection ───────────────────
+  const alertEl   = document.getElementById("alert-banner");
+  const composite = latest.composite ?? Math.round(latest.SCI * 0.4 + latest.track_a * 0.6);
+
+  const [latestRpi, prevRpi] = histAt(RPI?.monthly_readings, "RPI", activeViewMonth);
+  const rpiThr               = RPI?.alert_thresholds || {};
+
+  const [latestCci, prevCci] = histAt(CCI_DATA?.monthly_readings, "CCI", activeViewMonth);
+  const cciThr               = CCI_DATA?.alert_thresholds || {};
+
+  const ofpReadings = (OFP_DATA?.monthly_readings || []).filter(r => r.OFP != null);
+  const latestOfp   = ofpReadings[ofpReadings.length - 1];
+  const ofpThr      = OFP_DATA?.alert_thresholds || {};
+
+  const _ecs  = computeEcsVal();
+  const _mtcs = computeMtcsVal(_ecs);
+
+  // Returns the set of condition keys that are active for a given snapshot of readings.
+  // cityH = latest city history entry, permReadings = per-city perm ratio arrays.
+  function conditionKeys(cityH, rpiR, cciR, prevCciR, mtcsVal, permCities, ofpR) {
+    const keys = new Set();
+    // Per-city spread
+    if (cityH) {
+      const comp = cityH.composite ?? Math.round(cityH.SCI * 0.4 + cityH.track_a * 0.6);
+      if (cityH.spread <= -20) keys.add('city_spread_low');
+      if (cityH.spread >= 15)  keys.add('city_spread_high');
+    }
+    // RPI thresholds
+    const rv = rpiR?.RPI;
+    if (rv != null) {
+      if (rv >= (rpiThr.critical_above ?? 70))      keys.add('rpi_critical');
+      else if (rv >= (rpiThr.warning_above ?? 50))  keys.add('rpi_warning');
+      else if (rv >= (rpiThr.watch_above   ?? 35))  keys.add('rpi_watch');
+    }
+    // CCI thresholds
+    const cv = cciR?.CCI;
+    if (cv != null) {
+      if (cv >= (cciThr.critical_above ?? 65))      keys.add('cci_critical');
+      else if (cv >= (cciThr.warning_above ?? 45))  keys.add('cci_warning');
+      else if (cv >= (cciThr.watch_above   ?? 25))  keys.add('cci_watch');
+    }
+    // OFP thresholds
+    const ov = ofpR?.OFP;
+    if (ov != null) {
+      if (ov >= (ofpThr.critical_above ?? 70))      keys.add('ofp_critical');
+      else if (ov >= (ofpThr.warning_above ?? 50))  keys.add('ofp_warning');
+      else if (ov >= (ofpThr.watch_above   ?? 35))  keys.add('ofp_watch');
+      if (ofpModulator(ov) > 0) keys.add('ofp_modulator_active');
+    }
+    // Compound: CCI rising + permanence ratio falling
+    if (cciR && prevCciR && cciR.CCI > prevCciR.CCI && permCities) {
+      for (const [ck, city] of permCities) {
+        const pr = (city.monthly_readings || []).filter(r => r.ratio != null);
+        if (pr.length >= 2 && (pr[pr.length-1].ratio - pr[pr.length-2].ratio) <= -3)
+          keys.add(`compound_${ck}`);
+      }
+    }
+    // Structural spikes ≥25pts
+    if (rpiR && prevRpi) {
+      const ep = rpiR.export_pressure, ep0 = prevRpi.export_pressure;
+      if (ep != null && ep0 != null && (ep - ep0) >= 25) keys.add('structural_export_pressure');
+    }
+    if (cciR && prevCciR) {
+      const fs = cciR.fuel_score, fs0 = prevCciR.fuel_score;
+      if (fs != null && fs0 != null && (fs - fs0) >= 25) keys.add('structural_fuel_score');
+    }
+    // MTCS thresholds
+    if (mtcsVal != null) {
+      if (mtcsVal > 80)      keys.add('mtcs_critical');
+      else if (mtcsVal > 65) keys.add('mtcs_warning');
+    }
+    return keys;
+  }
+
+  const permCities = Object.entries(PERM?.cities ?? {});
+
+  // Prev city history entry for the same city
+  const cityHist   = cityData.history || [];
+  const [, prevLatest] = cityHistAt(cityHist, activeViewMonth);
+
+  // Compute prev-period MTCS for new-detection
+  function prevMtcs() {
+    return computePrevMtcsVal(prevRpi, prevCci, activeViewMonth);
+  }
+
+  const prevOfp     = ofpReadings.length > 1 ? ofpReadings[ofpReadings.length - 2] : null;
+
+  const currentKeys = conditionKeys(latest, latestRpi, latestCci, prevCci, _mtcs, permCities, latestOfp);
+  const prevKeys    = conditionKeys(prevLatest, prevRpi, prevCci, null, prevMtcs(), permCities, prevOfp);
+
+  // severity: 3=critical, 2=warning, 1=watch, 0=city
+  const KEY_META = {
+    city_spread_low:             { sev: 0, text: () => `⚠ ${cityData.display_name}: Composite (${composite}) outpaces B (${latest.track_b}) by ${Math.abs(latest.spread)} pts — state+private activity well ahead of residential reality.` },
+    city_spread_high:            { sev: 0, text: () => `↑ ${cityData.display_name}: B (${latest.track_b}) leads composite (${composite}) by +${latest.spread} pts — residential confidence running ahead of state+private signal.` },
+    rpi_watch:                   { sev: 1, text: () => `🟡 RPI ${latestRpi.RPI}: Watch — refinery pressure trending upward.` },
+    cci_watch:                   { sev: 1, text: () => `🟡 CCI ${latestCci.CCI}: Watch — elevated civilian stress in informal channels.` },
+    rpi_warning:                 { sev: 2, text: () => `🟠 RPI ${latestRpi.RPI}: WARNING — meaningful fiscal pressure on occupation funding.` },
+    cci_warning:                 { sev: 2, text: () => `🟠 CCI ${latestCci.CCI}: WARNING — multi-signal shortage confirmation.` },
+    mtcs_warning:                { sev: 2, text: () => `🔴 MTCS ${_mtcs}: Fragility confirmed across real estate and energy sectors.` },
+    rpi_critical:                { sev: 3, text: () => `🔴 RPI ${latestRpi.RPI}: CRITICAL — acute threat to SCI sustainability and occupation funding base.` },
+    cci_critical:                { sev: 3, text: () => `🔴 CCI ${latestCci.CCI}: CRITICAL — buckwheat index activating, systemic civilian confidence failure.` },
+    mtcs_critical:               { sev: 3, text: () => `🔴🔴 MTCS ${_mtcs}: Acute multi-sector signal — monitor for immediate behavioral change in occupied territories.` },
+    structural_export_pressure:  { sev: 3, text: () => { const ep=latestRpi.export_pressure, ep0=prevRpi.export_pressure; return `🔴 STRUCTURAL EVENT: RPI export_pressure +${ep-ep0} pts in one period (${ep0}→${ep}) — verify against key_events for kinetic triggers before treating as noise.`; } },
+    structural_fuel_score:       { sev: 3, text: () => { const fs=latestCci.fuel_score, fs0=prevCci.fuel_score; return `🔴 STRUCTURAL EVENT: CCI fuel_score +${fs-fs0} pts in one period (${fs0}→${fs}) — verify against key_events for kinetic/policy triggers before treating as noise.`; } },
+    ofp_watch:    { sev: 1, text: () => `🟡 OFP ${latestOfp.OFP}: Watch — occupation funding under mild structural pressure.` },
+    ofp_warning:  { sev: 2, text: () => `🟠 OFP ${latestOfp.OFP}: WARNING — meaningful fiscal pressure on occupation-war funding stream.` },
+    ofp_critical: { sev: 3, text: () => `🔴 OFP ${latestOfp.OFP}: CRITICAL — occupation financial durability at acute risk.` },
+    ofp_modulator_active: { sev: 1, text: () => `⚡ OFP modulator active: +${ofpModulator(latestOfp.OFP)} applied to MTCS base.` },
+  };
+  // Compound keys are dynamic (per city) — add them
+  for (const [ck] of permCities) {
+    if (currentKeys.has(`compound_${ck}`)) {
+      const delta = (() => { const pr=(PERM.cities[ck]?.monthly_readings||[]).filter(r=>r.ratio!=null); return pr.length>=2 ? pr[pr.length-1].ratio-pr[pr.length-2].ratio : 0; })();
+      KEY_META[`compound_${ck}`] = { sev: 2, text: () => `⚡ COMPOUND: CCI rising (+${latestCci.CCI - prevCci.CCI}) while ${ck} permanence ratio falling (${delta}) — behavioral change likely imminent.` };
+    }
+  }
+
+  const alertItems = [...currentKeys]
+    .filter(k => KEY_META[k])
+    .map(k => ({ key: k, sev: KEY_META[k].sev, isNew: !prevKeys.has(k), text: KEY_META[k].text() }))
+    .sort((a, b) => (b.isNew - a.isNew) || (b.sev - a.sev));
+
+  if (alertItems.length) {
+    alertEl.innerHTML = alertItems.map(a =>
+      `<span class="alert-row${a.isNew ? ' alert-row-new' : ''}">${a.isNew ? '<span class="alert-new">NEW</span> ' : ''}${a.text}</span>`
+    ).join("<br>");
+    alertEl.classList.add("visible");
+  } else {
+    alertEl.classList.remove("visible");
+  }
+
+  // Most severe active condition — surfaced in the Row 1 MTCS right panel
+  const mostSevereEl = document.getElementById("mtcs-active-condition");
+  if (mostSevereEl) {
+    const mostSevere = [...alertItems].sort((a, b) => b.sev - a.sev)[0];
+    mostSevereEl.textContent = mostSevere ? mostSevere.text : "No active conditions";
+  }
+
+  // ── What Changed diff strip ───────────────────────────────────────────────
+  (function buildDiffStrip() {
+    const stripEl  = document.getElementById("diff-strip");
+    const titleEl  = document.getElementById("diff-strip-title");
+    const chipsEl  = document.getElementById("diff-chips");
+    if (!stripEl) return;
+
+    // Color for a delta value: uses the metric's absolute-value color fn applied to the magnitude,
+    // but we want to signal intensity of change rather than level, so threshold on |delta|.
+    function deltaColor(absDelta, colorFn, absVal) {
+      // Use the color function on the absolute value so color semantics are preserved,
+      // but only if the delta is meaningful; otherwise muted.
+      return absDelta < 1 ? "var(--muted)" : colorFn(absVal);
+    }
+
+    // Previous period label — use month of previous reading where available
+    const prevLabel = prev?.month || prevRpi?.month || prevCci?.month || "prev";
+    const curLabel  = latest?.month || latestRpi?.month || latestCci?.month || "cur";
+
+    // ECS prev/cur (already computed above in updateDials scope via computeEcsVal)
+    const ecsVal  = computeEcsVal();
+    const prevEcs = (prevRpi && prevCci) ? Math.round(prevRpi.RPI * 0.5 + prevCci.CCI * 0.5) : null;
+
+    // MTCS prev
+    const mtcsVal = computeMtcsVal(ecsVal);
+    const prevMtcsVal = computePrevMtcsVal(prevRpi, prevCci, activeViewMonth);
+
+    // Build metric descriptors
+    const metrics = [
+      { label: "SCI",    cur: latest?.SCI,      prv: prev?.SCI,           colorFn: sciColor    },
+      { label: "Trk A",  cur: latest?.track_a,  prv: prev?.track_a,       colorFn: trackAColor },
+      { label: "Trk B",  cur: latest?.track_b,  prv: prev?.track_b,       colorFn: trackBColor },
+      { label: "Spread", cur: latest?.spread,   prv: prev?.spread,        colorFn: spreadColor },
+      { label: "RPI",    cur: latestRpi?.RPI,   prv: prevRpi?.RPI,        colorFn: rpiColor    },
+      { label: "CCI",    cur: latestCci?.CCI,   prv: prevCci?.CCI,        colorFn: cciColor    },
+      { label: "ECS",    cur: ecsVal,            prv: prevEcs,             colorFn: ecsColor    },
+      { label: "MTCS",   cur: mtcsVal,           prv: prevMtcsVal,         colorFn: mtcsColor   },
+    ];
+
+    const THRESHOLD = 3;
+    const anyMoved  = metrics.some(m => m.cur != null && m.prv != null && Math.abs(m.cur - m.prv) >= THRESHOLD);
+
+    if (!anyMoved) { stripEl.classList.remove("visible"); return; }
+
+    titleEl.textContent = `Since last update (${prevLabel})`;
+    chipsEl.innerHTML = metrics.map(m => {
+      const { label, cur, prv, colorFn } = m;
+      if (cur == null) return `<div class="diff-chip"><span class="diff-chip-label">${label}</span><span class="diff-chip-vals" style="color:var(--muted)">—</span></div>`;
+      if (prv == null) return `<div class="diff-chip"><span class="diff-chip-label">${label}</span><span class="diff-chip-vals">${cur}</span></div>`;
+      const d        = cur - prv;
+      const absDelta = Math.abs(d);
+      const arrow    = d > 0 ? "▲" : d < 0 ? "▼" : "";
+      const sign     = d > 0 ? "+" : "";
+      const col      = deltaColor(absDelta, colorFn, cur);
+      return `<div class="diff-chip">
+        <span class="diff-chip-label">${label}</span>
+        <span class="diff-chip-vals">${prv} → ${cur}</span>
+        <span class="diff-chip-delta" style="color:${col}">${arrow} ${sign}${d.toFixed(0)}</span>
+      </div>`;
+    }).join("");
+
+    stripEl.classList.add("visible");
+  })();
+}
+
+// ── Chart: Crimea prices ──────────────────────────────────────────────────
+function buildPriceChart() {
+  const readings = PRICES.readings;
+  const labels   = readings.map(r => r.date);
+  const values   = readings.map(r => r.value);
+  const evts     = (SCORES.key_events || [])
+    .filter(e => labels.includes(e.date))
+    .map(e => ({ ...e, color: EVENT_CATEGORY_COLOR[e.category] || "#8b949e" }));
+
+  const ptColors = readings.map(r => r.real ? "#58a6ff" : "#8b949e");
+  const ptRadii  = readings.map(r => r.real ? 4 : 2);
+
+  const opts = baseOpts(labels, evts);
+  opts.scales.y.title = { display: true, text: "₽ per m²", color: "#8b949e" };
+  opts.plugins.tooltip.callbacks = {
+    label: ctx => ` ${ctx.parsed.y.toLocaleString()} ₽/m²` + (readings[ctx.dataIndex]?.real === false ? " (estimated)" : "")
+  };
+
+  makeChart("chart-prices", "line", {
+    labels,
+    datasets: [
+      {
+        label: "Crimea secondary ₽/m²",
+        data: values,
+        borderColor: "#58a6ff",
+        backgroundColor: "rgba(88,166,255,0.07)",
+        fill: true, tension: 0.3,
+        pointBackgroundColor: ptColors,
+        pointRadius: ptRadii,
+        pointHoverRadius: 6,
+      },
+      {
+        // Mariupol new-build horizontal reference — single value across all labels
+        label: "Mariupol new build asking — GID.HOUSE single point (not an index)",
+        data: labels.map(() => 170000),
+        borderColor: "#db6d28",
+        borderDash: [6, 4],
+        borderWidth: 1.5,
+        backgroundColor: "transparent",
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0,
+      }
+    ]
+  }, opts);
+
+  renderEventsLegend("events-prices", labels, SCORES.key_events);
+}
+
+// ── Chart: Multi-city spread (all cities, weighted) ───────────────────────
+function buildAllSpreadChart() {
+  // Build unified month set across all cities
+  const allMonths = new Set();
+  for (const city of Object.values(SCORES.cities)) {
+    for (const h of city.history || []) allMonths.add(h.month);
+  }
+  const labels = Array.from(allMonths).sort();
+
+  const CITY_COLORS = {
+    mariupol: "#f85149", donetsk: "#58a6ff", luhansk: "#3fb950",
+    crimea: "#d29922", berdiansk: "#bc8cff",
+  };
+  const CITY_WEIGHTS = { mariupol: 1.0, donetsk: 1.0, luhansk: 1.0, crimea: 1.2, berdiansk: 0.7 };
+
+  const datasets = [];
+
+  // Mariupol and Crimea have real data anchors in the spread calculation.
+  // Donetsk, Luhansk, Berdiansk have no independent sourced Track A or B data.
+  const SOLID_CITIES = new Set(['mariupol', 'crimea']);
+
+  for (const [cityKey, city] of Object.entries(SCORES.cities)) {
+    const color    = CITY_COLORS[cityKey] || "#8b949e";
+    const weight   = CITY_WEIGHTS[cityKey] ?? 1.0;
+    const byMonth  = Object.fromEntries((city.history || []).map(h => [h.month, h]));
+    const isDashed = !SOLID_CITIES.has(cityKey);
+
+    // Weighted spread: B − composite, scaled by city weight
+    const data = labels.map(m => {
+      const h = byMonth[m];
+      if (!h) return null;
+      const spread = h.spread ?? (h.track_b - Math.round(h.SCI * 0.4 + h.track_a * 0.6));
+      return +(spread * weight).toFixed(1);
+    });
+
+    datasets.push({
+      label:           city.display_name + (weight !== 1.0 ? ` (×${weight})` : ""),
+      data,
+      borderColor:     color,
+      backgroundColor: "transparent",
+      borderDash:      isDashed ? [5, 4] : [],
+      borderWidth:     2,
+      pointRadius:     isDashed ? 2 : 3,
+      pointStyle:      'circle',
+      tension:         0.3,
+      spanGaps:        false,
+    });
+  }
+
+  // Zero reference line
+  datasets.push({
+    label: "Zero",
+    data: labels.map(() => 0),
+    borderColor: "rgba(139,148,158,0.3)",
+    borderDash: [3, 3],
+    borderWidth: 1,
+    pointRadius: 0,
+    fill: false,
+  });
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.title = { display: true, text: "Weighted spread (pts)", color: "#8b949e" };
+  // Shaded fragility zone below zero via plugin
+  opts.plugins.fragZone = true;
+
+  // Custom plugin to shade below-zero region
+  Chart.register({
+    id: "fragZone",
+    beforeDraw(chart) {
+      if (!chart.config.options.plugins?.fragZone) return;
+      const { ctx, chartArea, scales } = chart;
+      if (!scales.y || !chartArea) return;
+      const zeroY = scales.y.getPixelForValue(0);
+      if (zeroY >= chartArea.bottom) return;
+      ctx.save();
+      ctx.fillStyle = "rgba(248,81,73,0.06)";
+      ctx.fillRect(chartArea.left, zeroY, chartArea.right - chartArea.left, chartArea.bottom - zeroY);
+      // "Fragility zone" label
+      ctx.fillStyle = "rgba(248,81,73,0.4)";
+      ctx.font = "10px -apple-system, sans-serif";
+      ctx.fillText("Fragility zone", chartArea.left + 6, Math.min(zeroY + 14, chartArea.bottom - 4));
+      ctx.restore();
+    }
+  });
+
+  makeChart("chart-allspread", "line", { labels, datasets }, opts);
+  renderEventsLegend("events-allspread", labels, SCORES.key_events);
+}
+
+// ── Chart: Composite ──────────────────────────────────────────────────────
+function buildCompositeChart(cityKey) {
+  const city = SCORES.cities[cityKey];
+  if (!city) return;
+  const hist   = city.history;
+  const labels = hist.map(h => h.month);
+  document.getElementById("composite-city-label").textContent = city.display_name;
+
+  const evts = (SCORES.key_events || [])
+    .filter(e => labels.some(l => e.date.startsWith(l)))
+    .map(e => ({ date: e.date.slice(0, 7), color: EVENT_CATEGORY_COLOR[e.category] || "#8b949e" }));
+
+  const opts = baseOpts(labels, evts);
+  opts.scales.y.min = 0; opts.scales.y.max = 100;
+  opts.scales.y.title = { display: true, text: "Score (0–100)", color: "#8b949e" };
+
+  const hasBands = hist[0].SCI_lo != null;
+  const datasets = [];
+
+  if (hasBands) {
+    datasets.push({
+      label: "SCI hi",
+      data: hist.map(h => h.SCI_hi),
+      borderColor: "transparent", backgroundColor: "rgba(248,81,73,0.08)",
+      fill: "+1", pointRadius: 0, tension: 0.3
+    }, {
+      label: "SCI lo",
+      data: hist.map(h => h.SCI_lo),
+      borderColor: "transparent", backgroundColor: "rgba(248,81,73,0.08)",
+      fill: false, pointRadius: 0, tension: 0.3
+    });
+  }
+  datasets.push(
+    { label: "SCI",     data: hist.map(h => h.SCI),     borderColor: "#f85149", backgroundColor: "rgba(248,81,73,0)",   fill: false, tension: 0.3, pointRadius: 3 },
+    { label: "Track A", data: hist.map(h => h.track_a), borderColor: "#58a6ff", backgroundColor: "rgba(88,166,255,0)",  fill: false, tension: 0.3, pointRadius: 3 },
+    { label: "Track B", data: hist.map(h => h.track_b), borderColor: "#3fb950", backgroundColor: "rgba(63,185,80,0)",   fill: false, tension: 0.3, pointRadius: 3 }
+  );
+
+  makeChart("chart-composite", "line", { labels, datasets }, opts);
+  renderEventsLegend("events-composite", labels, SCORES.key_events);
+}
+
+// ── Chart: Spread ─────────────────────────────────────────────────────────
+function buildSpreadChart(cityKey) {
+  const city = SCORES.cities[cityKey];
+  if (!city) return;
+  const hist   = city.history;
+  const labels = hist.map(h => h.month);
+  document.getElementById("spread-city-label").textContent = city.display_name;
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.title = { display: true, text: "A − B (points)", color: "#8b949e" };
+
+  // Zero baseline
+  opts.plugins.annotation = {};  // placeholder
+  const spreads    = hist.map(h => h.spread);
+  const composites = hist.map(h => h.composite ?? Math.round(h.SCI * 0.4 + h.track_a * 0.6));
+  const trackBs    = hist.map(h => h.track_b);
+
+  makeChart("chart-spread", "line", {
+    labels,
+    datasets: [
+      {
+        label: "B − Composite spread",
+        data: spreads,
+        borderColor: "#d29922",
+        backgroundColor: ctx => {
+          const v = ctx.parsed?.y ?? 0;
+          return v >= 0 ? "rgba(63,185,80,0.10)" : "rgba(248,81,73,0.10)";
+        },
+        fill: "origin", tension: 0.3, pointRadius: 3,
+        segment: { borderColor: ctx => ctx.p0.parsed.y >= 0 ? "#3fb950" : "#f85149" }
+      },
+      {
+        label: "Composite (SCI×0.4 + A×0.6)",
+        data: composites,
+        borderColor: "#58a6ff",
+        borderDash: [5, 3],
+        backgroundColor: "transparent",
+        fill: false, tension: 0.3, pointRadius: 2
+      },
+      {
+        label: "Track B",
+        data: trackBs,
+        borderColor: "#3fb950",
+        backgroundColor: "transparent",
+        fill: false, tension: 0.3, pointRadius: 2
+      },
+      {
+        label: "Zero",
+        data: labels.map(() => 0),
+        borderColor: "rgba(139,148,158,0.25)",
+        borderDash: [3, 3],
+        pointRadius: 0,
+        fill: false
+      }
+    ]
+  }, opts);
+  renderEventsLegend("events-spread", labels, SCORES.key_events);
+}
+
+// ── Panel: Buy vs Rent Economics ──────────────────────────────────────────
+function buildBuyRentPanel() {
+  const CITY_COLORS = {
+    mariupol: "#f85149", donetsk: "#58a6ff", luhansk: "#3fb950",
+    crimea: "#d29922", berdiansk: "#bc8cff",
+  };
+
+  // City economics data — pulled from PERM where available, fallback hardcoded from seed
+  const cityData = [
+    {
+      key: "mariupol", name: "Mariupol (new build)", isMariupol: true,
+      buy:    PERM?.cities?.mariupol?.buy_monthly_payment_rub  ?? 19800,
+      rent:   PERM?.cities?.mariupol?.typical_rent_rub         ?? 20000,
+      note:   "New-build only (₽170,000/m²). 18% local buyer adj. applies.",
+    },
+    {
+      key: "donetsk", name: "Donetsk",
+      buy:    PERM?.cities?.donetsk?.buy_monthly_payment_rub   ?? 4500,
+      rent:   PERM?.cities?.donetsk?.typical_rent_rub          ?? 17000,
+      note:   "Secondary market. Strongest rent premium in corridor.",
+    },
+    {
+      key: "luhansk", name: "Luhansk",
+      buy:    PERM?.cities?.luhansk?.buy_monthly_payment_rub   ?? 3900,
+      rent:   PERM?.cities?.luhansk?.typical_rent_rub          ?? 15000,
+      note:   "Secondary market. Lowest purchase cost.",
+    },
+    {
+      key: "crimea", name: "Crimea (secondary)",
+      buy:    PERM?.cities?.crimea?.buy_monthly_payment_rub    ?? 19800,
+      rent:   PERM?.cities?.crimea?.typical_rent_rub           ?? 35000,
+      note:   "Annual avg rent. Resort seasonal peak ₽50–100k/mo excluded.",
+    },
+  ];
+
+  const wrap = document.getElementById("buyrent-table-wrap");
+  if (!wrap) return;
+
+  let html = `<table class="buyrent-table">
+    <thead><tr>
+      <th>City</th>
+      <th>Own/mo (2%)</th>
+      <th>Rent/mo (est.)</th>
+      <th>Optionality premium</th>
+      <th>Premium % of rent</th>
+    </tr></thead><tbody>`;
+
+  for (const c of cityData) {
+    const premium    = c.rent - c.buy;
+    const premiumPct = ((premium / c.rent) * 100).toFixed(0);
+    const isPosSign  = premium > 0;
+    const rowClass   = c.isMariupol ? " class=\"mariupol-row\"" : "";
+    const dotStyle   = `background:${CITY_COLORS[c.key]}`;
+
+    html += `<tr${rowClass}>
+      <td><span class="city-dot" style="${dotStyle}"></span>${c.name}</td>
+      <td>₽${c.buy.toLocaleString()}</td>
+      <td>₽${c.rent.toLocaleString()}</td>
+      <td class="${isPosSign ? "premium-positive" : "premium-neutral"}">
+        ${isPosSign ? "+" : ""}₽${Math.abs(premium).toLocaleString()}
+        ${isPosSign ? "↑ renting costs more" : "↓ owning costs more"}
+      </td>
+      <td class="${isPosSign ? "premium-positive" : "premium-neutral"}">
+        ${isPosSign ? "+" : ""}${premiumPct}%
+      </td>
+    </tr>`;
+  }
+
+  html += `</tbody></table>
+    <div class="buyrent-mariupol-note">
+      ⚠ Mariupol new-build monthly cost (₽19,800) exceeds typical rental (est. ₽20,000 when available) —
+      ownership is not cheaper here. This removes the standard permanence incentive and explains
+      why PSB data shows ~82% of Mariupol mortgage buyers are inter-regional speculators, not local residents.
+    </div>`;
+
+  wrap.innerHTML = html;
+}
+
+// ── RPI / CCI dial update (global — not city-specific) ───────────────────
+function updatePressureDials() {
+  function setPressureDial(gaugeId, valId, bandId, chgId, colorFn, readings) {
+    const valid = (readings || []).filter(r => r != null && typeof r === "object");
+    const withVal = valid.filter(r => r.RPI != null || r.CCI != null);
+    const key = withVal.length && withVal[0].RPI != null ? "RPI" : "CCI";
+    const [latest, prev] = histAt(withVal, key, activeViewMonth);
+    const val    = latest?.[key] ?? null;
+
+    const el = document.getElementById(valId);
+    if (el) {
+      el.textContent = val ?? "—";
+      el.style.color = val != null ? colorFn(val) : "#8b949e";
+    }
+    if (val != null) drawGauge(gaugeId, val, colorFn(val));
+
+    const chgEl = document.getElementById(chgId);
+    if (chgEl && prev && prev[key] != null && val != null) {
+      const d = val - prev[key];
+      if (d === 0) {
+        chgEl.textContent = "Stable";
+        chgEl.className = "dial-change";
+      } else {
+        chgEl.textContent = (d > 0 ? "▲ +" : "▼ ") + d.toFixed(0);
+        chgEl.className = "dial-change " + (d > 0 ? "up" : "down");
+      }
+    }
+    const bandEl = document.getElementById(bandId);
+    if (bandEl && val != null) {
+      // Confidence band: ±20% for estimated, ±10% for mixed, none for real
+      const isReal = latest?.real === true && !latest?.partial;
+      const isMixed = latest?.partial === true;
+      if (!isReal) {
+        const pct = isMixed ? 0.10 : 0.20;
+        const lo  = Math.max(0,   Math.round(val * (1 - pct)));
+        const hi  = Math.min(100, Math.round(val * (1 + pct)));
+        bandEl.textContent = `${lo}–${hi}`;
+      } else {
+        bandEl.textContent = "";
+      }
+    }
+  }
+
+  setPressureDial("gauge-rpi", "rpi-val", "rpi-band", "rpi-chg", rpiColor, RPI?.monthly_readings);
+  setPressureDial("gauge-cci", "cci-val", "cci-band", "cci-chg", cciColor, CCI_DATA?.monthly_readings);
+
+  // OFP shares RPI's pressure convention (high = bad) and identical alert thresholds (35/50/70).
+  // setPressureDial auto-detects its metric via an .RPI/.CCI field, so OFP readings are passed
+  // through under an .RPI alias rather than modifying setPressureDial itself.
+  const ofpAsRpi = (OFP_DATA?.monthly_readings || []).map(r => ({ ...r, RPI: r.OFP }));
+  setPressureDial("gauge-ofp", "ofp-val", "ofp-band", "ofp-chg", rpiColor, ofpAsRpi);
+
+  const ofpNoteEl = document.getElementById("ofp-modulator-note");
+  if (ofpNoteEl) {
+    const ofpVal = getOfpAt(activeViewMonth);
+    ofpNoteEl.textContent = ofpVal != null
+      ? `MTCS modulator: +${ofpModulator(ofpVal)} at OFP ${ofpVal}`
+      : "MTCS modulator: —";
+  }
+}
+
+// ── Chart: Refinery Pressure Index ───────────────────────────────────────
+function buildRpiChart() {
+  const readings = (RPI?.monthly_readings || []).filter(r => r.RPI != null);
+  if (!readings.length) return;
+  const labels = readings.map(r => r.month);
+  const thr    = RPI?.alert_thresholds || {};
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.min   = 0;
+  opts.scales.y.max   = 100;
+  opts.scales.y.title = { display: true, text: "Score (0–100)", color: "#8b949e" };
+
+  makeChart("chart-rpi", "line", {
+    labels,
+    datasets: [
+      { label: "Capacity pressure", data: readings.map(r => r.capacity_pressure), borderColor: "#58a6ff", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "Strike score",      data: readings.map(r => r.strike_score),      borderColor: "#d29922", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "Export pressure",   data: readings.map(r => r.export_pressure),   borderColor: "#3fb950", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "RPI composite",     data: readings.map(r => r.RPI),               borderColor: "#f85149", borderWidth: 3,   pointRadius: 4, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      // Threshold lines
+      { label: `Warning ≥${thr.warning_above||50}`,  data: labels.map(() => thr.warning_above||50),  borderColor: "#d29922", borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: `Critical ≥${thr.critical_above||70}`, data: labels.map(() => thr.critical_above||70), borderColor: "#f85149", borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+    ]
+  }, opts);
+}
+
+// ── Chart: Civilian Confidence Index ─────────────────────────────────────
+function buildCciChart() {
+  const readings = (CCI_DATA?.monthly_readings || []).filter(r => r.CCI != null);
+  if (!readings.length) return;
+  const labels = readings.map(r => r.month);
+  const thr    = CCI_DATA?.alert_thresholds || {};
+
+  // Show critical callout if this is the first reading to cross critical_above
+  const critical = thr.critical_above ?? 65;
+  const latest   = readings[readings.length - 1];
+  const prevMax  = readings.slice(0, -1).reduce((m, r) => Math.max(m, r.CCI ?? 0), 0);
+  const callout  = document.getElementById("cci-critical-callout");
+  if (callout) callout.style.display = (latest?.CCI >= critical && prevMax < critical) ? "" : "none";
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.min   = 0;
+  opts.scales.y.max   = 100;
+  opts.scales.y.title = { display: true, text: "Score (0–100)", color: "#8b949e" };
+
+  makeChart("chart-cci", "line", {
+    labels,
+    datasets: [
+      { label: "Fuel price premium", data: readings.map(r => r.fuel_score),          borderColor: "#d29922", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "Panic keywords",     data: readings.map(r => r.panic_keyword_score), borderColor: "#f85149", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "Avito grey market",  data: readings.map(r => r.avito_premium_score), borderColor: "#bc8cff", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "CCI composite",      data: readings.map(r => r.CCI),                 borderColor: "#e6edf3", borderWidth: 3,   pointRadius: 4, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      // Threshold lines
+      { label: `Watch ≥${thr.watch_above||25}`,    data: labels.map(() => thr.watch_above||25),    borderColor: "#d29922", borderDash: [3,3], borderWidth: 1,   pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: `Warning ≥${thr.warning_above||45}`, data: labels.map(() => thr.warning_above||45),  borderColor: "#db6d28", borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: `Critical ≥${thr.critical_above||65}`,data: labels.map(() => thr.critical_above||65), borderColor: "#f85149", borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+    ]
+  }, opts);
+}
+
+// ── Chart: Occupation Financial Pressure ─────────────────────────────────
+function buildOfpChart() {
+  const readings = (OFP_DATA?.monthly_readings || []).filter(r => r.OFP != null);
+  if (!readings.length) return;
+  const labels = readings.map(r => r.month);
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.min   = 0;
+  opts.scales.y.max   = 100;
+  opts.scales.y.title = { display: true, text: "Score (0–100)", color: "#8b949e" };
+
+  // MTCS modulator step thresholds — 40/55/70/85
+  makeChart("chart-ofp", "line", {
+    labels,
+    datasets: [
+      { label: "Export revenue proxy",   data: readings.map(r => r.export_revenue_proxy),       borderColor: "#58a6ff", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "NWF liquid % GDP score", data: readings.map(r => r.nwf_liquid_pct_gdp_score),    borderColor: "#d29922", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "OFZ debt stress",        data: readings.map(r => r.ofz_debt_stress),             borderColor: "#bc8cff", borderWidth: 1.5, pointRadius: 2, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      { label: "OFP composite",          data: readings.map(r => r.OFP),                         borderColor: "#f85149", borderWidth: 3,   pointRadius: 4, tension: 0.3, fill: false, backgroundColor: "transparent" },
+      // Modulator threshold lines
+      { label: "Modulator +2 ≥40",  data: labels.map(() => 40), borderColor: "#58a6ff", borderDash: [3,3], borderWidth: 1,   pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: "Modulator +4 ≥55",  data: labels.map(() => 55), borderColor: "#d29922", borderDash: [4,3], borderWidth: 1.2, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: "Modulator +6 ≥70",  data: labels.map(() => 70), borderColor: "#db6d28", borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+      { label: "Modulator +8 ≥85",  data: labels.map(() => 85), borderColor: "#f85149", borderDash: [6,4], borderWidth: 1.5, pointRadius: 0, fill: false, backgroundColor:"transparent" },
+    ]
+  }, opts);
+}
+
+// ── ECS + MTCS computation helpers ────────────────────────────────────────
+
+function computeEcsVal(viewMonth) {
+  const vm = viewMonth !== undefined ? viewMonth : activeViewMonth;
+  const [lr] = histAt(RPI?.monthly_readings, "RPI", vm);
+  const [lc] = histAt(CCI_DATA?.monthly_readings, "CCI", vm);
+  return (lr && lc) ? Math.round(lr.RPI * 0.5 + lc.CCI * 0.5) : null;
+}
+
+// OFP modulator lookup — additive boost to MTCS base from occupation financial pressure
+function ofpModulator(ofpVal) {
+  if (ofpVal === null || ofpVal === undefined) return 0;
+  if (ofpVal > 85) return 8;
+  if (ofpVal > 70) return 6;
+  if (ofpVal > 55) return 4;
+  if (ofpVal > 40) return 2;
+  return 0;
+}
+
+function getOfpAt(viewMonth) {
+  const vm = viewMonth !== undefined ? viewMonth : activeViewMonth;
+  const [lo] = histAt(OFP_DATA?.monthly_readings, "OFP", vm);
+  return lo?.OFP ?? null;
+}
+
+function getOfpPrevAt(viewMonth) {
+  const vm = viewMonth !== undefined ? viewMonth : activeViewMonth;
+  const [, po] = histAt(OFP_DATA?.monthly_readings, "OFP", vm);
+  return po?.OFP ?? null;
+}
+
+// Returns { base, modulator, final, ofpVal, corridorREP } or null if inputs unavailable.
+function computeMtcsDetail(ecsVal, viewMonth) {
+  if (ecsVal == null || !SCORES?.cities) return null;
+  const vm = viewMonth !== undefined ? viewMonth : activeViewMonth;
+  const WEIGHTS = { mariupol: 1.0, donetsk: 1.0, luhansk: 1.0, crimea: 1.2, berdiansk: 0.7 };
+  let totalW = 0, wREP = 0;
+
+  console.group("🗺 computeMtcsDetail — per-city REP breakdown");
+  for (const [key, city] of Object.entries(SCORES.cities)) {
+    const hist = city.history || [];
+    const [h]  = cityHistAt(hist, vm);
+    if (!h) { console.warn(`  ${key}: no history entry`); continue; }
+
+    // Spread: use stored value, or recompute from raw scores as fallback
+    const storedSpread    = h.spread;
+    const computedSpread  = h.track_b - Math.round(h.SCI * 0.4 + h.track_a * 0.6);
+    const spread          = storedSpread ?? computedSpread;
+    const rep             = 50 - spread;
+    const w               = WEIGHTS[key] ?? 1.0;
+    const contribution    = rep * w;
+    wREP   += contribution;
+    totalW += w;
+
+    console.log(
+      `  ${key.padEnd(10)} month=${h.month}` +
+      `  spread=${String(spread).padStart(4)} (stored=${storedSpread ?? "—"}, computed=${computedSpread})` +
+      `  REP=${String(rep).padStart(4)}` +
+      `  weight=×${w}` +
+      `  contribution=${contribution.toFixed(1)}`
+    );
+  }
+
+  if (!totalW) { console.groupEnd(); return null; }
+
+  const corridorREP = wREP / totalW;
+  const base         = Math.round(corridorREP * 0.5 + ecsVal * 0.5);
+  const ofpVal        = getOfpAt(vm);
+  const modulator      = ofpModulator(ofpVal);
+  const final          = Math.min(100, base + modulator);
+
+  console.log(`  ${"─".repeat(72)}`);
+  console.log(
+    `  totalWeight=${totalW.toFixed(1)}` +
+    `  weightedSum=${wREP.toFixed(1)}` +
+    `  corridorREP=${corridorREP.toFixed(2)}`
+  );
+  console.log(
+    `  ECS=${ecsVal}` +
+    `  Base MTCS = (${corridorREP.toFixed(2)} × 0.5) + (${ecsVal} × 0.5) = ${(corridorREP * 0.5 + ecsVal * 0.5).toFixed(2)} → rounded ${base}` +
+    `  OFP=${ofpVal} → modulator +${modulator}` +
+    `  Final MTCS = min(100, ${base} + ${modulator}) = ${final}`
+  );
+  console.groupEnd();
+
+  return { base, modulator, final, ofpVal, corridorREP };
+}
+
+// Backward-compatible wrapper — existing callers expect a plain number (the final MTCS value).
+function computeMtcsVal(ecsVal, viewMonth) {
+  return computeMtcsDetail(ecsVal, viewMonth)?.final ?? null;
+}
+
+// Shared "previous period" MTCS calc (base formula + OFP modulator using the prior OFP reading).
+// Used by the alert system's new-detection, the diff strip, and the Row 1 change indicator.
+function computePrevMtcsVal(prevRpiR, prevCciR, viewMonth) {
+  if (!prevRpiR || !prevCciR) return null;
+  const vm = viewMonth !== undefined ? viewMonth : activeViewMonth;
+  const ecsP = Math.round(prevRpiR.RPI * 0.5 + prevCciR.CCI * 0.5);
+  const WEIGHTS = { mariupol:1.0, donetsk:1.0, luhansk:1.0, crimea:1.2, berdiansk:0.7 };
+  let tw = 0, ws = 0;
+  for (const [k, c] of Object.entries(SCORES?.cities ?? {})) {
+    const [, hp] = cityHistAt(c.history || [], vm);
+    if (!hp) continue;
+    const sp = hp.spread ?? (hp.track_b - Math.round(hp.SCI*0.4 + hp.track_a*0.6));
+    const w  = WEIGHTS[k] ?? 1.0;
+    ws += (50 - sp) * w;
+    tw += w;
+  }
+  if (!tw) return null;
+  const baseP = Math.round(ws / tw * 0.5 + ecsP * 0.5);
+  const modP  = ofpModulator(getOfpPrevAt(vm));
+  return Math.min(100, baseP + modP);
+}
+
+// ── Summary dials: ECS + MTCS ──────────────────────────────────────────────
+function buildSummaryDials() {
+  // ── ECS ──────────────────────────────────────────────────────────────────
+  const [lrpi, prpi] = histAt(RPI?.monthly_readings, "RPI", activeViewMonth);
+  const [lcci, pcci] = histAt(CCI_DATA?.monthly_readings, "CCI", activeViewMonth);
+
+  const ecsVal  = (lrpi && lcci) ? Math.round(lrpi.RPI * 0.5 + lcci.CCI * 0.5) : null;
+  const prevEcs = (prpi && pcci) ? Math.round(prpi.RPI * 0.5 + pcci.CCI * 0.5) : null;
+
+  if (ecsVal != null) {
+    const col = ecsColor(ecsVal);
+    drawGauge("gauge-ecs", ecsVal, col);
+
+    const ev = document.getElementById("ecs-val");
+    if (ev) { ev.textContent = ecsVal; ev.style.color = col; }
+
+    // Confidence band: ±20% (both RPI and CCI are estimated)
+    const bnd = document.getElementById("ecs-band");
+    if (bnd) bnd.textContent = `${Math.max(0, Math.round(ecsVal * 0.8))}–${Math.min(100, Math.round(ecsVal * 1.2))}`;
+
+    // Change indicator
+    const chg = document.getElementById("ecs-chg");
+    if (chg && prevEcs != null) {
+      const d = ecsVal - prevEcs;
+      if (d === 0) { chg.textContent = "Stable"; chg.className = "dial-change"; }
+      else { chg.textContent = (d > 0 ? "▲ +" : "▼ ") + d; chg.className = "dial-change " + (d > 0 ? "up" : "down"); }
+    }
+  }
+
+  // ── MTCS ─────────────────────────────────────────────────────────────────
+  const detail  = computeMtcsDetail(ecsVal);
+  const mtcsVal = detail?.final ?? null;
+
+  if (mtcsVal != null) {
+    const col = mtcsColor(mtcsVal);
+    drawFullGauge("gauge-mtcs", mtcsVal, col);
+
+    const mv = document.getElementById("mtcs-val");
+    if (mv) { mv.textContent = mtcsVal; mv.style.color = col; }
+
+    const ms = document.getElementById("mtcs-status");
+    if (ms) { ms.textContent = mtcsStatus(mtcsVal); ms.style.color = col; }
+
+    const bn = document.getElementById("mtcs-band-name");
+    if (bn) { bn.textContent = mtcsBandName(mtcsVal); bn.style.color = col; }
+
+    const baseLine = document.getElementById("mtcs-base-line");
+    if (baseLine) baseLine.textContent = detail.base;
+    const modLine = document.getElementById("mtcs-modulator-line");
+    if (modLine) modLine.textContent = `+${detail.modulator}`;
+    const finalLine = document.getElementById("mtcs-final-line");
+    if (finalLine) finalLine.textContent = mtcsVal;
+
+    // Period-over-period change — only render when a real previous MTCS value
+    // exists; never show a delta against zero/default/uninitialized state.
+    const prevMtcsVal = computePrevMtcsVal(prpi, pcci, activeViewMonth);
+    const chgEl = document.getElementById("mtcs-chg");
+    if (chgEl) {
+      if (prevMtcsVal == null) {
+        chgEl.textContent = "";
+        chgEl.className = "mtcs-change-lg";
+      } else {
+        const d = mtcsVal - prevMtcsVal;
+        if (d === 0) { chgEl.textContent = "Stable"; chgEl.className = "mtcs-change-lg"; }
+        else { chgEl.textContent = (d > 0 ? "▲ +" : "▼ ") + d; chgEl.className = "mtcs-change-lg " + (d > 0 ? "up" : "down"); }
+      }
+    }
+  }
+}
+
+// ── Time scrubber ─────────────────────────────────────────────────────────
+function buildScrubber() {
+  // Collect all months present in the active city's history
+  const cityData = SCORES.cities[activeCityKey];
+  const months = (cityData?.history || []).map(h => h.month);
+  if (months.length < 2) return; // no scrubbing possible with <2 readings
+
+  const container = document.getElementById("scrubber-months");
+  const scrubber  = document.getElementById("time-scrubber");
+  if (!container || !scrubber) return;
+
+  const latestMonth = months[months.length - 1];
+  const fmt = m => { const [y, mo] = m.split("-"); return new Date(+y, +mo - 1).toLocaleString("en", {month:"short"}) + " " + y.slice(2); };
+
+  container.innerHTML = months.map(m =>
+    `<button class="month-btn${m === latestMonth ? " latest" : ""}${(activeViewMonth ?? latestMonth) === m ? " active" : ""}"
+      onclick="setViewMonth('${m}')">${fmt(m)}</button>`
+  ).join("");
+
+  scrubber.style.display = "";
+}
+
+function setViewMonth(month) {
+  const cityData  = SCORES.cities[activeCityKey];
+  const hist      = cityData?.history || [];
+  const latestMo  = hist.length ? hist[hist.length - 1].month : null;
+  const isLatest  = !month || month === latestMo;
+
+  activeViewMonth = isLatest ? null : month;
+
+  // Update scrubber button highlight
+  document.querySelectorAll(".month-btn").forEach(b => {
+    const bm = b.textContent; // not useful directly — use onclick attr approach
+    b.classList.remove("active");
+  });
+  // Re-highlight via re-render of scrubber buttons
+  const container = document.getElementById("scrubber-months");
+  if (container) {
+    const months  = hist.map(h => h.month);
+    const selMonth = activeViewMonth ?? latestMo;
+    const fmt = m => { const [y, mo] = m.split("-"); return new Date(+y, +mo - 1).toLocaleString("en", {month:"short"}) + " " + y.slice(2); };
+    container.innerHTML = months.map(m =>
+      `<button class="month-btn${m === latestMo ? " latest" : ""}${selMonth === m ? " active" : ""}"
+        onclick="setViewMonth('${m}')">${fmt(m)}</button>`
+    ).join("");
+  }
+
+  // Historical banner
+  const banner = document.getElementById("hist-banner");
+  const bannerText = document.getElementById("hist-banner-text");
+  if (banner && bannerText) {
+    if (activeViewMonth) {
+      const [y, mo] = activeViewMonth.split("-");
+      const label = new Date(+y, +mo - 1).toLocaleString("en", {month:"long", year:"numeric"});
+      const latestDate = new Date(+latestMo.split("-")[0], +latestMo.split("-")[1] - 1);
+      const viewDate   = new Date(+y, +mo - 1);
+      const diffMonths = Math.round((latestDate - viewDate) / (1000 * 60 * 60 * 24 * 30.44));
+      bannerText.textContent = `Viewing: ${label} — ${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
+      banner.classList.add("visible");
+    } else {
+      banner.classList.remove("visible");
+    }
+  }
+
+  // Re-render all dials with new viewMonth
+  updateDials(activeCityKey);
+  updatePressureDials();
+  buildSummaryDials();
+}
+
+// ── City switch ───────────────────────────────────────────────────────────
+function switchCity(cityKey) {
+  activeCityKey = cityKey;
+  document.querySelectorAll(".city-btn").forEach(b => b.classList.toggle("active", b.dataset.city === cityKey));
+  buildScrubber();
+  updateDials(cityKey);
+  buildCompositeChart(cityKey);
+  buildSpreadChart(cityKey);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+// ── Chart: Permanence ratio ───────────────────────────────────────────────
+const PERM_CITY_COLORS = {
+  mariupol:  "#f85149",
+  donetsk:   "#58a6ff",
+  luhansk:   "#3fb950",
+  crimea:    "#d29922",
+  berdiansk: "#bc8cff",
+};
+
+const PERM_CITY_LABELS = {
+  mariupol:  "Mariupol (×0.18 local adj.)",
+  donetsk:   "Donetsk",
+  luhansk:   "Luhansk",
+  crimea:    "Crimea (×0.55 local adj.)",
+  berdiansk: "Berdiansk (×0.25 est.)",
+};
+
+function buildPermanenceChart() {
+  // Build a unified month label set across all cities
+  const allMonths = new Set();
+  for (const city of Object.values(PERM.cities)) {
+    for (const r of city.monthly_readings || []) {
+      if (r.month) allMonths.add(r.month);
+    }
+  }
+  const labels = Array.from(allMonths).sort();
+  const thresholds = PERM.alert_thresholds || { critical_below: 50, warning_below: 65, stable_above: 75 };
+
+  const datasets = [];
+
+  for (const [cityKey, city] of Object.entries(PERM.cities)) {
+    const color    = PERM_CITY_COLORS[cityKey] || "#8b949e";
+    const readings = city.monthly_readings || [];
+
+    // Map month → reading for quick lookup
+    const byMonth = Object.fromEntries(readings.map(r => [r.month, r]));
+
+    const data        = labels.map(m => byMonth[m]?.ratio ?? null);
+    const isAllEst    = readings.every(r => !r.real);
+
+    datasets.push({
+      label:           PERM_CITY_LABELS[cityKey] || cityKey,
+      data,
+      borderColor:     color,
+      backgroundColor: "transparent",
+      borderDash:      isAllEst ? [5, 4] : [],
+      borderWidth:     2,
+      pointRadius:     labels.map(m => byMonth[m]?.ratio != null ? 3 : 0),
+      pointBackgroundColor: labels.map(m => {
+        const r = byMonth[m]?.ratio;
+        if (r == null) return "transparent";
+        return r < thresholds.critical_below ? "#f85149"
+             : r < thresholds.warning_below  ? "#d29922"
+             : "#3fb950";
+      }),
+      tension:         0.3,
+      spanGaps:        false,
+      _byMonth:        byMonth,
+    });
+  }
+
+  // Threshold reference lines
+  const refLine = (val, color, label) => ({
+    label, data: labels.map(() => val),
+    borderColor: color, borderDash: [6, 4], borderWidth: 1.5,
+    pointRadius: 0, backgroundColor: "transparent", fill: false,
+  });
+  datasets.push(
+    refLine(thresholds.stable_above,   "#3fb950", `Stable ≥${thresholds.stable_above}`),
+    refLine(thresholds.warning_below,  "#d29922", `Watch <${thresholds.warning_below}`),
+    refLine(thresholds.critical_below, "#f85149", `Critical <${thresholds.critical_below}`),
+  );
+
+  const opts = baseOpts(labels, []);
+  opts.scales.y.min   = 0;
+  opts.scales.y.max   = 100;
+  opts.scales.y.title = { display: true, text: "Permanence Ratio (0–100)", color: "#8b949e" };
+  opts.plugins.tooltip.callbacks = {
+    label(ctx) {
+      const ds = ctx.dataset;
+      const m  = labels[ctx.dataIndex];
+      // Threshold lines — keep simple
+      if (!ds._byMonth) return ` ${ds.label}: ${ctx.parsed.y}`;
+      const r = ds._byMonth[m];
+      if (!r || r.ratio == null) return null;
+      const lines = [` Ratio: ${r.ratio}`];
+      if (r.local_mortgage_adj != null) lines.push(` Local mortgages: ${r.local_mortgage_adj}`);
+      if (r.rental_listings_est != null || r.rental_listings_avito != null) {
+        const rent = r.rental_listings_avito ?? r.rental_listings_est;
+        lines.push(` Rental listings: ${rent}${r.rental_listings_avito ? " (Avito)" : " (est.)"}`);
+      }
+      // City economics
+      const cityMeta = PERM.cities[Object.keys(PERM_CITY_LABELS).find(k => PERM_CITY_LABELS[k] === ds.label || k === ds.label.split(" ")[0].toLowerCase())];
+      if (cityMeta?.buy_monthly_payment_rub && cityMeta?.typical_rent_rub) {
+        const premium = cityMeta.typical_rent_rub - cityMeta.buy_monthly_payment_rub;
+        lines.push(` Own ₽${cityMeta.buy_monthly_payment_rub.toLocaleString()}/mo vs rent ₽${cityMeta.typical_rent_rub.toLocaleString()}/mo`);
+        if (premium > 0) lines.push(` Rent premium: +₽${premium.toLocaleString()}/mo`);
+      }
+      if (!r.real) lines.push(" (estimated)");
+      return lines;
+    },
+    title(items) { return items[0]?.label || ""; },
+  };
+  opts.plugins.legend.labels.filter = item =>
+    !["Stable ≥75","Watch <65","Critical <50"].includes(item.text)
+    ? true
+    : true;   // show all — threshold lines included but styled muted
+
+  makeChart("chart-permanence", "line", { labels, datasets }, opts);
+
+  // ── Per-city mini-cards with sparklines ────────────────────────────────
+  const grid = document.getElementById("perm-city-grid");
+  grid.innerHTML = "";
+
+  const cityDisplayNames = {
+    mariupol: "Mariupol", donetsk: "Donetsk", luhansk: "Luhansk",
+    crimea: "Crimea", berdiansk: "Berdiansk",
+  };
+
+  for (const [cityKey, city] of Object.entries(PERM.cities)) {
+    const color    = PERM_CITY_COLORS[cityKey] || "#8b949e";
+    const readings = (city.monthly_readings || []).filter(r => r.ratio != null);
+    if (!readings.length) continue;
+
+    const latest    = readings[readings.length - 1];
+    const ratio     = latest.ratio;
+    const spark6    = readings.slice(-6);
+    const thr       = PERM.alert_thresholds || {};
+    const ratioColor = ratio < (thr.critical_below || 50) ? "#f85149"
+                     : ratio < (thr.warning_below  || 65) ? "#d29922"
+                     : ratio >= (thr.stable_above  || 75) ? "#3fb950"
+                     : "#58a6ff";
+    const ratioLabel = ratio < (thr.critical_below || 50) ? "⚠ Optionality premium active"
+                     : ratio < (thr.warning_below  || 65) ? "△ Watch — below warning threshold"
+                     : ratio >= (thr.stable_above  || 75) ? "✓ Stable permanence signal"
+                     : "Neutral";
+
+    const buy  = city.buy_monthly_payment_rub;
+    const rent = city.typical_rent_rub;
+    const premium = (buy && rent) ? rent - buy : null;
+    const adj  = city.adjustment_factor;
+
+    const cardId = `spark-${cityKey}`;
+    const card   = document.createElement("div");
+    card.className = "perm-city-card";
+    card.innerHTML = `
+      <div class="pcc-name">${cityDisplayNames[cityKey] || cityKey}</div>
+      <div class="pcc-ratio" style="color:${ratioColor}">${ratio}</div>
+      <div class="pcc-label" style="color:${ratioColor}">${ratioLabel}</div>
+      ${buy && rent ? `<div class="pcc-econ">
+        Own ₽${buy.toLocaleString()}/mo &nbsp;·&nbsp; Rent ₽${rent.toLocaleString()}/mo
+        ${premium > 0 ? `<br>Rent premium <strong style="color:#d29922">+₽${premium.toLocaleString()}/mo</strong>` : ""}
+        ${adj < 1 ? `<br>Local adj: ${Math.round(adj*100)}% of buyers counted` : ""}
+      </div>` : `<div class="pcc-econ">adj factor: ${Math.round(adj*100)}%</div>`}
+      <div class="pcc-spark"><canvas id="${cardId}" height="40"></canvas></div>`;
+    grid.appendChild(card);
+
+    // Sparkline
+    const sparkCtx = card.querySelector(`#${cardId}`).getContext("2d");
+    const sparkVals = spark6.map(r => r.ratio);
+    const sparkColors = sparkVals.map(v =>
+      v < (thr.critical_below || 50) ? "rgba(248,81,73,0.7)"
+      : v < (thr.warning_below  || 65) ? "rgba(210,153,34,0.7)"
+      : "rgba(63,185,80,0.7)"
+    );
+    new Chart(sparkCtx, {
+      type: "line",
+      data: {
+        labels: spark6.map(r => r.month),
+        datasets: [{
+          data: sparkVals,
+          borderColor: color,
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          pointRadius: 2,
+          pointBackgroundColor: sparkColors,
+          tension: 0.3,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: {
+            display: true,
+            min: 0, max: 100,
+            ticks: { maxTicksLimit: 3, font: { size: 9 }, color: "#8b949e" },
+            grid: { color: "#21262d" },
+          }
+        },
+        animation: { duration: 400 },
+      }
+    });
+  }
+}
+
+async function init() {
+  try {
+  [PRICES, DEVS, MORT, SCORES, PERM, DOMCLICK, RPI, CCI_DATA, OFP_DATA] = await Promise.all([
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/crimea_prices.json",      SEED_PRICES),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/developer_counts.json",   SEED_DEVS),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/mortgage_volumes.json",   SEED_MORT),
+    fetchJSON("https://black-sea-real-estate.vercel.app/api/scores",                  SEED_SCORES),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/permanence_ratio.json",   SEED_PERM),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/domclick_listings.json",   {cities:{donetsk:{readings:[]},luhansk:{readings:[]}}}),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/refinery_pressure.json",   SEED_RPI),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/civilian_confidence.json", SEED_CCI),
+    fetchJSON("https://black-sea-real-estate.vercel.app/data/occupation_financial_pressure.json", SEED_OFP),
+  ]);
+
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  // City buttons
+  const bar = document.getElementById("city-bar");
+  for (const [key, city] of Object.entries(SCORES.cities)) {
+    const btn = document.createElement("button");
+    btn.className = "city-btn" + (key === activeCityKey ? " active" : "");
+    btn.dataset.city = key;
+    btn.textContent = city.display_name + (city.weight !== 1.0 ? ` ×${city.weight}` : "");
+    btn.addEventListener("click", () => switchCity(key));
+    bar.appendChild(btn);
+  }
+
+  // Status bar — read from loaded data, with safe fallbacks
+  const priceReadings = PRICES?.readings ?? [];
+  document.getElementById("st-crimea").textContent = priceReadings.length + " readings";
+
+  const dokReadings = DOMCLICK?.cities?.donetsk?.readings ?? [];
+  const luhReadings = DOMCLICK?.cities?.luhansk?.readings ?? [];
+  const latestDok   = dokReadings[dokReadings.length - 1];
+  const latestLuh   = luhReadings[luhReadings.length - 1];
+  document.getElementById("st-dok").textContent = latestDok?.apartments ?? latestDok?.total_residential ?? "385";
+  document.getElementById("st-luh").textContent = latestLuh?.houses ?? "856";
+
+  const mortTotals = MORT?.totals ?? [];
+  const latestMort = [...mortTotals].filter(t => t.real).pop();
+  document.getElementById("st-mort").textContent = latestMort
+    ? "₽" + (latestMort.three_bank_rub / 1e9).toFixed(1) + "bn (" + latestMort.date.slice(0, 7) + ")"
+    : "₽28.3bn (2025-12)";
+
+  const rawLastUpdated = SCORES?.last_updated || priceReadings[priceReadings.length - 1]?.date || "2026-06-06";
+  const dataDate = rawLastUpdated.slice(0, 10); // display as YYYY-MM-DD regardless of timestamp
+  document.getElementById("st-latest").textContent = dataDate;
+  document.getElementById("last-updated").textContent = "Data: " + dataDate;
+
+  // Build scrubber
+  buildScrubber();
+
+  // Build everything
+  updateDials(activeCityKey);
+  updatePressureDials();
+  buildSummaryDials();
+  buildPriceChart();
+  buildAllSpreadChart();
+  buildCompositeChart(activeCityKey);
+  buildSpreadChart(activeCityKey);
+  buildBuyRentPanel();
+  buildPermanenceChart();
+  buildRpiChart();
+  buildCciChart();
+  buildOfpChart();
+
+  // Tabs — resize charts after panel becomes visible to fix 0×0 canvas issue
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".chart-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const panel = document.getElementById("tab-" + btn.dataset.tab);
+      panel.classList.add("active");
+      // Chart.js sizes canvases at init time; if the panel was display:none the
+      // canvas reports 0×0. Calling resize() after the panel is visible corrects it.
+      panel.querySelectorAll("canvas").forEach(canvas => {
+        if (chartInstances[canvas.id]) chartInstances[canvas.id].resize();
+      });
+    });
+  });
+
+  } catch (err) {
+    console.error("Black Sea Monitor init error:", err);
+    document.getElementById("loading").textContent = "⚠ Dashboard error: " + err.message + " — check console for details.";
+    document.getElementById("loading").style.display = "block";
+  }
+}
+
+init();
+
+function showDigestLink(date, digestUrl) {
+  if (!date) return;
+  if (document.getElementById('digestLink')) return;
+  const anchor = document.getElementById('last-updated');
+  if (!anchor) return;
+  const d = new Date(date + 'T00:00:00');
+  const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const a = document.createElement('a');
+  a.id = 'digestLink';
+  a.href = digestUrl || 'https://black-sea-real-estate.vercel.app/api/digest/latest';
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  anchor.appendChild(document.createElement('br'));
+  a.textContent = 'Latest digest: ' + label + ' →';
+  a.style.cssText = 'font-size:11px;color:#8b949e;text-decoration:none;';
+  a.onmouseover = () => a.style.textDecoration = 'underline';
+  a.onmouseout  = () => a.style.textDecoration = 'none';
+  anchor.appendChild(a);
+}
+
+function showPendingBanner(data) {
+  const existing = document.getElementById('pendingAlert');
+  if (existing) return;
+  const alertBanner = document.querySelector('.alert-banner') || document.querySelector('[id*="alert"]');
+  const div = document.createElement('div');
+  div.id = 'pendingAlert';
+  div.style.cssText = 'background:#1f2d1f;border-left:3px solid #3fb950;padding:10px 16px;margin-bottom:8px;font-size:12px;color:#c9d1d9;border-radius:4px;';
+  div.innerHTML = '📋 <strong style="color:#3fb950">New digest pending review</strong> — ' + data.date + ' · ' + data.summary + ' · <a href="https://black-sea-real-estate.vercel.app/api/digest/latest" style="color:#58a6ff">Read full digest →</a>';
+  if (alertBanner && alertBanner.parentNode) {
+    alertBanner.parentNode.insertBefore(div, alertBanner);
+  } else {
+    document.body.prepend(div);
+  }
+}
+
+async function checkPending() {
+  try {
+    const res = await fetch('https://black-sea-real-estate.vercel.app/api/pending');
+    const data = await res.json();
+
+    if (data.pending) {
+      // Compare full timestamps: pending.time vs scores.last_updated (both ISO)
+      // Fall back to date-only comparison if time field absent (legacy pending.json)
+      const digestTs = new Date(data.time || (data.date + 'T00:00:00Z'));
+      const scoresTs = new Date(SCORES?.last_updated || '2000-01-01');
+
+      if (scoresTs >= digestTs) {
+        // Already ingested — auto-clear and show quiet link
+        await fetch('https://black-sea-real-estate.vercel.app/api/pending', { method: 'DELETE' });
+        showDigestLink(data.date, data.digest_url);
+      } else {
+        // Pending and not yet ingested — show green banner
+        showPendingBanner(data);
+      }
+    } else {
+      // Not pending — show quiet link if we have a last digest date
+      if (data.last_digest_date) {
+        showDigestLink(data.last_digest_date, data.digest_url);
+      }
+    }
+  } catch(e) { /* silent fail */ }
+}
+checkPending();
+</script>
+<a href="https://davidfacer.com/" class="site-attribution">© 2026 David Facer</a>
+
+</body>
+</html>
