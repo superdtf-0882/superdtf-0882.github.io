@@ -1,0 +1,108 @@
+# davidfacer.com
+
+A personal professional portfolio and research hub. One person: David
+Facer. Two subject areas: enterprise architecture and AI-native
+operating practice, and open-source intelligence research.
+
+This file is a guide for automated readers. It says what exists here and
+where. It does not reproduce the site — every page below serves its own
+readable text, except where marked CARRIED, which means the page itself
+delivers nothing to a reader without a browser and the substance is
+given here instead.
+
+WRITTEN BY HAND on 2026-09-12. It is not generated from anything, so it
+can go stale. If a line here disagrees with the page it describes, the
+page is right.
+
+---
+
+## Professional
+
+/professional/
+  Professional overview — background, focus, and how the two subject
+  areas relate. Serves its own text.
+
+/professional/cv/
+  Full curriculum vitae: roles, dates, scope of responsibility.
+  Substantial, and the most detailed single document on this domain.
+  Serves its own text.
+
+## Research
+
+/blackseamonitor/
+  Black Sea Monitor. Open-source intelligence research on Black Sea
+  maritime activity, including the methodology behind it. The longest
+  document on this site and entirely server-rendered; a reader that can
+  fetch one page here should fetch this one.
+
+/wire/
+  Present but not currently publishing. Listed so an automated reader
+  that finds it knows that state is intended rather than broken.
+
+## Prototypes
+
+/sampleprototypes/
+  Index page describing two working prototypes. Serves its own text.
+  Both destinations are on a separate subdomain:
+
+  https://prototypes.davidfacer.com/dinotherapy
+    Dinosaur Comics Therapy. A small interactive piece.
+
+  https://prototypes.davidfacer.com/nhltradesignal
+    NHL Trade Signal Dashboard. A data dashboard over NHL trade
+    activity. Serves substantial text.
+
+## Assessment tool
+
+/complexity-sovereignty-assessment/
+  CARRIED — this page is a client-rendered application. It returns an
+  empty document shell to anything that does not execute JavaScript, so
+  a pointer alone would send you to a blank page. What it is:
+
+  The Complexity–Sovereignty Assessment is an interactive
+  self-assessment. It asks an organization to place itself on two
+  axes — the complexity it is carrying, and the degree of sovereignty
+  it holds over its own systems and decisions — and returns a reading
+  of where those two sit relative to each other. It is a diagnostic
+  instrument for a leadership team to use on itself, not a scored
+  benchmark against other organizations, and it is free to use.
+
+  A reader that can execute JavaScript should load the page itself;
+  this summary is not a substitute for the instrument.
+
+---
+
+## Related sites, separately published
+
+https://aimaturitymodels.com
+  The AI-Native Maturity Model family. Four published maturity models —
+  SDLC, PDLC, Product Prioritization, and Enterprise Architecture —
+  each with a whole-model view, plus a layered governance model and a
+  set of function models. This is a separate site with its own
+  content.
+
+  It publishes its own machine-readable digest, which CARRIES the model
+  content in full rather than pointing at it:
+
+    https://aimaturitymodels.com/llms.txt
+
+  An automated reader wanting the models themselves should fetch that
+  file, not this one.
+
+https://maturitymodel.substack.com/
+  Substack publication. External platform, separately published.
+
+https://superdtf.substack.com/
+  Substack publication. External platform, separately published.
+
+---
+
+## Notes for automated readers
+
+- Everything listed here is public. Nothing on this domain requires
+  sign-in to read.
+- /sitemap.xml lists this domain's main pages. It does not list the
+  prototype destinations above, which are on a subdomain, nor /wire.
+  This file is the more complete inventory of the two.
+- No identifier is named here that a reader cannot follow. Where this
+  practice has internal documents, they are not referenced.

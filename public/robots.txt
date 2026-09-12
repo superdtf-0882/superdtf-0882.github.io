@@ -2,3 +2,9 @@ User-agent: *
 Allow: /
 
 Sitemap: https://davidfacer.com/sitemap.xml
+
+# Guide for automated readers. Says what each page is, and carries the
+# content of the one page that renders client-side. LLM-Content is not a
+# standard directive and is ignored by crawlers that do not know it; the
+# file is also at the conventional /llms.txt path.
+LLM-Content: https://davidfacer.com/llms.txt
