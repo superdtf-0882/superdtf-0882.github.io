@@ -3,7 +3,7 @@
 # repo serves davidfacer.com, the practice's primary public surface, and
 # it is the repo a conformance sweep reads to answer what the site is --
 # so line-ending churn here costs review attention on the one diff that
-# is read most often. Added 2026-09-16.
+# is read most often. Added 2026-09-17 UTC.
 #
 # public/index.html was the single CRLF file in the index and is
 # renormalized in the same commit, so this file does not leave a latent
