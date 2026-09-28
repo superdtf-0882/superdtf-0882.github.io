@@ -35,10 +35,6 @@ page is right.
   document on this site and entirely server-rendered; a reader that can
   fetch one page here should fetch this one.
 
-/wire/
-  Present but not currently publishing. Listed so an automated reader
-  that finds it knows that state is intended rather than broken.
-
 ## Prototypes
 
 /sampleprototypes/
@@ -102,7 +98,7 @@ https://superdtf.substack.com/
 - Everything listed here is public. Nothing on this domain requires
   sign-in to read.
 - /sitemap.xml lists this domain's main pages. It does not list the
-  prototype destinations above, which are on a subdomain, nor /wire.
+  prototype destinations above, which are on a subdomain.
   This file is the more complete inventory of the two.
 - No identifier is named here that a reader cannot follow. Where this
   practice has internal documents, they are not referenced.
