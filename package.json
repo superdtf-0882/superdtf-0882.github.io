@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/work-item-gate.js --report",
+    "prebuild": "node scripts/work-item-gate.js",
     "build": "next build",
     "build:local": "next build",
     "start": "next start"
