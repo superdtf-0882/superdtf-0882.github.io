@@ -72,18 +72,19 @@ page is right.
 
 https://aimaturitymodels.com
   The AI-Native Maturity Model family. Four published maturity models —
-  SDLC, PDLC, Product Prioritization, and Enterprise Architecture —
-  each with a whole-model view, plus a layered governance model and a
-  set of function models. This is a separate site with its own
-  content.
+  SDLC, PDLC, Portfolio Prioritization, and Enterprise Architecture —
+  each with a whole-model view, plus Strata, the architectural
+  governance plane, and a set of function models. This is a separate
+  site with its own content.
 
-  It publishes its own machine-readable digest, which CARRIES the model
-  content in full rather than pointing at it:
+  It publishes its own files for AI readers: a map, and the full text
+  in one file, which CARRIES the model content in full:
 
-    https://aimaturitymodels.com/llms.txt
+    https://aimaturitymodels.com/llms.txt       the map
+    https://aimaturitymodels.com/llms-full.txt  the full text
 
-  An automated reader wanting the models themselves should fetch that
-  file, not this one.
+  An automated reader wanting the models themselves should fetch the
+  full text, not this file.
 
 https://maturitymodel.substack.com/
   Substack publication. External platform, separately published.
