@@ -18,7 +18,7 @@ Next's `/public` folder serves files at their literal path only — it does not 
 ## Embedded / ported apps
 
 - **`/complexity-sovereignty-assessment/`** — a separate Vite + React app ([`complexity-sovereignty-assessment` repo](https://github.com/superdtf-0882/complexity-sovereignty-assessment)). Not built from this repo — after any change there, run `npm run build` in that repo and copy `dist/*` into `public/complexity-sovereignty-assessment/` here, then rebuild/redeploy this project.
-- **`/blackseamonitor/`** — a static HTML shell copied from the [`BlackSeaRealEstate` repo](https://github.com/superdtf-0882/BlackSeaRealEstate)'s `public/index.html`, with its API and data-file fetches pointed at absolute URLs on the live `black-sea-real-estate.vercel.app` deployment (which keeps running independently — its cron job, Vercel Blob store, and secrets are untouched). This page fetches live cross-origin, so it isn't a build artifact like the assessment tool above — just copy `index.html` again if the source app's front-end changes.
+- **`/blackseamonitor/`** — a short retired page. The Black Sea Monitor ran from July to October 2026 and was retired under OKF-TOGAF#186; the page says so, loads nothing and runs no script, and the home page, sitemap and `llms.txt` no longer list it. The rewrite for it in `next.config.js` stays, because it is what serves this page. `scripts/blackseamonitor-retired-self-test.js` checks all of this. (The dashboard it replaced was a copy of the [`BlackSeaRealEstate` repo](https://github.com/superdtf-0882/BlackSeaRealEstate)'s front end, fetching from `black-sea-real-estate.vercel.app`.)
 
 ## Local development
 

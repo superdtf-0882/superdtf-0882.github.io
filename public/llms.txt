@@ -27,14 +27,6 @@ page is right.
   Substantial, and the most detailed single document on this domain.
   Serves its own text.
 
-## Research
-
-/blackseamonitor/
-  Black Sea Monitor. Open-source intelligence research on Black Sea
-  maritime activity, including the methodology behind it. The longest
-  document on this site and entirely server-rendered; a reader that can
-  fetch one page here should fetch this one.
-
 ## Prototypes
 
 /sampleprototypes/
