@@ -46,6 +46,12 @@ if (G) {
   ok(/lib\/a\.js:1 +github/.test(printed.replace(/\\/g, "/")) && !printed.includes(gh) && !printed.includes(aws) && !printed.includes(pw),
     "the report names file, line and kind, and never the value");
   ok(G.secretExit(hits) === 1 && G.secretExit([]) === 0, "a secret refuses the build; none lets it through");
+  // Staged as 104-DT2 section 5 and 108-CC section 4 recorded it, as Ring 3 was:
+  // stage 1 runs all three checks on a live build and refuses nothing; stage 2
+  // refuses on a secret. The stage is one constant, so moving it is one commit.
+  ok(G.STAGE === 1, "stage 1: all three checks report, nothing refuses yet", "STAGE " + G.STAGE);
+  ok(typeof G.gateExit === "function" && G.gateExit(hits, false) === (G.STAGE >= 2 ? 1 : 0) && G.gateExit(hits, true) === 0 && G.gateExit([], false) === 0,
+    "the build's exit follows the stage; --report never refuses");
   fs.rmSync(dir, { recursive: true, force: true });
 
   // Lint and the audit report, and never refuse -- even when they cannot run.

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/work-item-gate.js",
+    "prebuild": "node scripts/work-item-gate.js && node scripts/code-gate.js && node scripts/code-gate-self-test.js",
     "build": "next build",
     "build:local": "next build",
     "start": "next start"
@@ -16,5 +16,9 @@
   },
   "engines": {
     "node": "24.x"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.20"
   }
 }

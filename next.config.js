@@ -17,6 +17,10 @@ const staticPages = [
 
 const nextConfig = {
   trailingSlash: true,
+  // WP-D6-06 (OKF-TOGAF#160): lint reports and refuses nothing. The code gate
+  // in prebuild prints its counts; Next would otherwise lint again and refuse
+  // the build on an error.
+  eslint: { ignoreDuringBuilds: true },
   async rewrites() {
     return staticPages.map((path) => ({
       source: path,
