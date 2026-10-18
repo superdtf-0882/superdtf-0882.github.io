@@ -62,7 +62,20 @@ say(/href="https:\/\/davidfacer\.com\/"/.test(cv), "davidfacer.com as a link");
 say(/href="https:\/\/www\.linkedin\.com\/in\/davidfacer"/.test(cv), "LinkedIn in the contact line");
 say(/Toyoda over Taylor\./.test(cv) && /EA OKF/.test(cv), "the draft's own words carried, not paraphrased");
 
+console.log("old pages taken down");
+const exists = (p) => fs.existsSync(path.join(__dirname, "..", "public", p));
+const config = fs.readFileSync(path.join(__dirname, "..", "next.config.js"), "utf8");
+const sitemap = read("sitemap.xml");
+say(!exists("professional/index.html"), "the /professional/ overview page is gone");
+say(!exists("professional/enterprise-architecture/index.html") && !exists("professional/enterprise-architecture/sdlc-maturity/index.html"), "the retired EA pages' leftover files are gone");
+say(exists("professional/cv/index.html"), "the CV stays");
+say(/source:\s*'\/professional\/',\s*destination:\s*'\/',\s*permanent:\s*true/.test(config), "/professional/ forwards to the home page");
+say(/source:\s*'\/professional\/enterprise-architecture\/'/.test(config), "the EA page's forward stays");
+say(!/'\/professional\/',\n/.test(config.slice(config.indexOf("staticPages"), config.indexOf("];"))) && !/'\/professional\/enterprise-architecture\/'/.test(config.slice(config.indexOf("staticPages"), config.indexOf("];"))), "no rewrite to a page that is gone");
+say(!/<loc>https:\/\/davidfacer\.com\/professional\/<\/loc>/.test(sitemap) && /professional\/cv\//.test(sitemap), "the sitemap lists the CV, not the overview");
+
 console.log("llms.txt");
+say(!/^\/professional\/\n/m.test(llms), "no /professional/ entry");
 say(!/research hub|open-source intelligence research/i.test(llms), "no longer a research hub");
 say(!/superdtf\.substack\.com/.test(llms), "no superdtf Substack");
 say(!/\b(two|three|four|five|six) published maturity models\b/i.test(llms) && !/\bFour published\b/.test(llms), "no count of the maturity models");
