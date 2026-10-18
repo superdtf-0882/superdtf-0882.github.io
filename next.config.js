@@ -7,8 +7,6 @@
 // every existing GitHub Pages URL.
 const staticPages = [
   '/',
-  '/professional/',
-  '/professional/enterprise-architecture/',
   '/professional/cv/',
   '/sampleprototypes/',
   '/complexity-sovereignty-assessment/',
@@ -37,8 +35,18 @@ const nextConfig = {
   // redirect below is repointed straight at the final destination rather
   // than left chaining through aisdlc.davidfacer.com's own new redirect
   // (which now points to the same place) -- one hop, not two.
+  //
+  // 2026-10-18 (OKF-TOGAF#211): the /professional/ overview, a copy of the old
+  // home page's career column, is taken down on the owner's word and its
+  // address forwards to the home page, which now carries what it linked to.
+  // The two forwards below stay; their pages' leftover files are removed.
   async redirects() {
     return [
+      {
+        source: '/professional/',
+        destination: '/',
+        permanent: true,
+      },
       {
         source: '/professional/enterprise-architecture/sdlc-maturity/',
         destination: 'https://aimaturitymodels.com/models/sdlc/assessment',

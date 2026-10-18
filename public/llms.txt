@@ -18,10 +18,6 @@ page is right.
 
 ## Professional
 
-/professional/
-  Professional overview — links to the CV, the maturity models,
-  prototypes and the professional Substack. Serves its own text.
-
 /professional/cv/
   Full curriculum vitae: roles, dates, scope of responsibility.
   Substantial, and the most detailed single document on this domain.
