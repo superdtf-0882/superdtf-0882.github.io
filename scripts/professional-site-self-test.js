@@ -44,6 +44,7 @@ say(/href="\/professional\/cv\/"/.test(home), "the CV");
 say(/href="mailto:david\.facer@davidfacer\.com"/.test(home), "contact, by email");
 say(/href="https:\/\/maturitymodel\.substack\.com\/?"/.test(home), "the Professional Substack stays");
 say(/href="\/sampleprototypes\/"/.test(home), "Prototypes");
+say(/href="https:\/\/www\.linkedin\.com\/in\/davidfacer"/.test(home), "LinkedIn, the owner's profile");
 say(!!desc && !/geopolitics|economic complexity|political philosophy|independent research/i.test(desc), "the meta description follows");
 
 console.log("prototypes");
@@ -58,6 +59,7 @@ say((cv.match(/<h3 class="font-display text-paper text-base mb-2">/g) || []).len
 say((cv.match(/whitespace-nowrap">[A-Z][a-z]{2} \d{4} &ndash;/g) || []).length === 10, "ten roles in the chronology");
 say(/Strategy &amp; AI Architecture Consultant/.test(cv), "the current role under its new title");
 say(/href="https:\/\/davidfacer\.com\/"/.test(cv), "davidfacer.com as a link");
+say(/href="https:\/\/www\.linkedin\.com\/in\/davidfacer"/.test(cv), "LinkedIn in the contact line");
 say(/Toyoda over Taylor\./.test(cv) && /EA OKF/.test(cv), "the draft's own words carried, not paraphrased");
 
 console.log("llms.txt");
