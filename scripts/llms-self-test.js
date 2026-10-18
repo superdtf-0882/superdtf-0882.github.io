@@ -28,7 +28,9 @@ say(/https:\/\/aimaturitymodels\.com\/llms-full\.txt\s+the full text/.test(passa
 say(/https:\/\/aimaturitymodels\.com\/llms\.txt\s+the map/.test(passage), "it names /llms.txt as the map");
 say(/fetch the\s+full text, not this file/.test(passage), "it sends a reader wanting the models to the full text");
 say(!/CARRIES the model\s+content in full rather than pointing at it:\s+https:\/\/aimaturitymodels\.com\/llms\.txt/.test(passage), "it no longer says /llms.txt carries the models in full");
-say(/Portfolio Prioritization/.test(passage) && !/Product Prioritization/.test(passage), "the model's current name");
+// OKF-TOGAF#211: the passage no longer lists the models, so the current name
+// is not required; the retired one stays refused.
+say(!/Product Prioritization/.test(passage), "no retired model name");
 say(/Strata, the architectural\s+governance plane/.test(passage) && !/layered governance model/.test(passage), "Strata in the owner's words");
 
 console.log(bad ? "LLMS SELF-TEST FAIL" : "LLMS SELF-TEST PASS");
