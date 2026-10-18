@@ -1,8 +1,8 @@
 # davidfacer.com
 
-A personal professional portfolio and research hub. One person: David
-Facer. Two subject areas: enterprise architecture and AI-native
-operating practice, and open-source intelligence research.
+The professional site of one person, David Facer: enterprise
+architecture and AI-native operating practice. The practice's models and
+assessments are published separately, at aimaturitymodels.com (below).
 
 This file is a guide for automated readers. It says what exists here and
 where. It does not reproduce the site — every page below serves its own
@@ -10,8 +10,8 @@ readable text, except where marked CARRIED, which means the page itself
 delivers nothing to a reader without a browser and the substance is
 given here instead.
 
-WRITTEN BY HAND on 2026-09-12. It is not generated from anything, so it
-can go stale. If a line here disagrees with the page it describes, the
+WRITTEN BY HAND on 2026-09-12, last revised 2026-10-18. It is not
+generated from anything, so it can go stale. If a line here disagrees with the page it describes, the
 page is right.
 
 ---
@@ -19,8 +19,8 @@ page is right.
 ## Professional
 
 /professional/
-  Professional overview — background, focus, and how the two subject
-  areas relate. Serves its own text.
+  Professional overview — links to the CV, the maturity models,
+  prototypes and the professional Substack. Serves its own text.
 
 /professional/cv/
   Full curriculum vitae: roles, dates, scope of responsibility.
@@ -30,8 +30,9 @@ page is right.
 ## Prototypes
 
 /sampleprototypes/
-  Index page describing two working prototypes. Serves its own text.
-  Both destinations are on a separate subdomain:
+  Index page describing the working prototypes. Serves its own text.
+  One is on this domain, the assessment below; the others are on a
+  separate subdomain:
 
   https://prototypes.davidfacer.com/dinotherapy
     Dinosaur Comics Therapy. A small interactive piece.
@@ -40,34 +41,32 @@ page is right.
     NHL Trade Signal Dashboard. A data dashboard over NHL trade
     activity. Serves substantial text.
 
-## Assessment tool
+## Prototype on this domain
 
 /complexity-sovereignty-assessment/
   CARRIED — this page is a client-rendered application. It returns an
   empty document shell to anything that does not execute JavaScript, so
   a pointer alone would send you to a blank page. What it is:
 
-  The Complexity–Sovereignty Assessment is an interactive
-  self-assessment. It asks an organization to place itself on two
-  axes — the complexity it is carrying, and the degree of sovereignty
-  it holds over its own systems and decisions — and returns a reading
-  of where those two sit relative to each other. It is a diagnostic
-  instrument for a leadership team to use on itself, not a scored
-  benchmark against other organizations, and it is free to use.
+  The Economic Complexity & Sovereignty Assessment is a prototype that
+  applies an assessment method to nations. Each country in its dataset
+  is scored for economic complexity and for sovereignty and strategic
+  autonomy, with a reading of the gap between the two and the
+  constraint that binds it. It is free to use.
 
   A reader that can execute JavaScript should load the page itself;
-  this summary is not a substitute for the instrument.
+  this summary is not a substitute for it.
 
 ---
 
 ## Related sites, separately published
 
 https://aimaturitymodels.com
-  The AI-Native Maturity Model family. Four published maturity models —
-  SDLC, PDLC, Portfolio Prioritization, and Enterprise Architecture —
-  each with a whole-model view, plus Strata, the architectural
-  governance plane, and a set of function models. This is a separate
-  site with its own content.
+  The AI-Native Maturity Model family: open maturity models, each with
+  a whole-model view and a free self-assessment, plus Strata, the architectural
+  governance plane, and a set of function models. Its own
+  map, below, lists the models; this file does not, so that it cannot
+  fall behind them. This is a separate site with its own content.
 
   It publishes its own files for AI readers: a map, and the full text
   in one file, which CARRIES the model content in full:
@@ -79,9 +78,6 @@ https://aimaturitymodels.com
   full text, not this file.
 
 https://maturitymodel.substack.com/
-  Substack publication. External platform, separately published.
-
-https://superdtf.substack.com/
   Substack publication. External platform, separately published.
 
 ---
