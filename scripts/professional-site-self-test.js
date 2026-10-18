@@ -51,6 +51,15 @@ say(/href="\/complexity-sovereignty-assessment\/"/.test(protos), "the assessment
 say(/Economic Complexity &amp; Sovereignty Assessment/.test(protos), "under its name");
 say(/prototypes\.davidfacer\.com\/dinotherapy/.test(protos), "DinoTherapy stays");
 
+console.log("CV");
+const cv = read("professional/cv/index.html");
+say(/Enterprise Architecture &amp; AI-Native Governance/.test(cv), "the owner's new practice area, AI-native governance");
+say((cv.match(/<h3 class="font-display text-paper text-base mb-2">/g) || []).length === 4, "four practice areas");
+say((cv.match(/whitespace-nowrap">[A-Z][a-z]{2} \d{4} &ndash;/g) || []).length === 10, "ten roles in the chronology");
+say(/Strategy &amp; AI Architecture Consultant/.test(cv), "the current role under its new title");
+say(/href="https:\/\/davidfacer\.com\/"/.test(cv), "davidfacer.com as a link");
+say(/Toyoda over Taylor\./.test(cv) && /EA OKF/.test(cv), "the draft's own words carried, not paraphrased");
+
 console.log("llms.txt");
 say(!/research hub|open-source intelligence research/i.test(llms), "no longer a research hub");
 say(!/superdtf\.substack\.com/.test(llms), "no superdtf Substack");
