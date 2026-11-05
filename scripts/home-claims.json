@@ -1,0 +1,45 @@
+{
+  "about": "Every number and number word on the home page and in llms.txt, where each ends, the CV page's role titles, the outside links, and the fingerprint of the CV download. This is content, not code. A number enters here only after it has been read in the download, and a replaced download fails the test until it has been read against this list again. OKF-TOGAF#237.",
+  "download": {
+    "path": "professional/cv/David_Facer_CV.pdf",
+    "sha256": ""
+  },
+  "numbers": [
+    { "text": "2005", "ends": "the CV download" },
+    { "text": "2009", "ends": "the CV download" },
+    { "text": "2011", "ends": "the CV download" },
+    { "text": "2021", "ends": "the CV download" },
+    { "text": "2023", "ends": "the CV download" },
+    { "text": "75%", "ends": "the CV download" },
+    { "text": "60%", "ends": "the CV download" },
+    { "text": "20%", "ends": "the CV download" },
+    { "text": "$800M", "ends": "the CV download" },
+    { "text": "4.0", "ends": "the licence stated on aimaturitymodels.com" }
+  ],
+  "words": [
+    { "text": "quadrupled", "ends": "the CV download" },
+    { "text": "twice", "ends": "the CV download" },
+    { "text": "two", "ends": "the CV download" },
+    { "text": "three", "ends": "this page, which has three areas" }
+  ],
+  "titles": [
+    "Strategy &amp; AI Architecture Consultant",
+    "Director of Product Management &ndash; Digital Platforms &amp; Platform Data",
+    "Head of Product &amp; Platform",
+    "Strategy Consultant",
+    "Vice President, Platform Systems Development",
+    "Director of Platform Development",
+    "Director of Product Management &ndash; Photoanalysis Platforms",
+    "Director of Platform Product Management",
+    "Director of Product &amp; Platform Operations",
+    "Product Manager"
+  ],
+  "links": [
+    "https://aimaturitymodels.com/",
+    "https://aimaturitymodels.com/models/sdlc/whole-model-view/",
+    "https://aimaturitymodels.com/strata/",
+    "https://maturitymodel.substack.com/",
+    "https://www.linkedin.com/in/davidfacer",
+    "https://github.com/superdtf-0882"
+  ]
+}
