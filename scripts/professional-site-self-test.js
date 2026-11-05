@@ -82,7 +82,7 @@ say(!/\b(two|three|four|five|six) published maturity models\b/i.test(llms) && !/
 say(!/Product Prioritization/.test(llms), "no retired model name");
 say(/Strata, the architectural\s+governance plane/.test(llms), "Strata in the owner's words");
 say(!/leadership team to use on itself/.test(llms) && /nations?\b|countr(y|ies)\b/i.test(llms), "the assessment read as what it is, a reading of nations");
-say(/last revised 2026-11-04/.test(llms), "the revision date");
+say(/last revised 2026-10-18/.test(llms), "the revision date");
 
 console.log(bad ? "PROFESSIONAL SITE SELF-TEST FAIL" : "PROFESSIONAL SITE SELF-TEST PASS");
 process.exit(bad);

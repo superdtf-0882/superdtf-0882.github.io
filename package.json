@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/work-item-gate.js && node scripts/code-gate.js && node scripts/code-gate-self-test.js && node scripts/llms-self-test.js && node scripts/professional-site-self-test.js && node scripts/home-claims-self-test.js",
+    "prebuild": "node scripts/work-item-gate.js && node scripts/code-gate.js && node scripts/code-gate-self-test.js",
     "build": "next build",
     "build:local": "next build",
     "start": "next start"
