@@ -103,6 +103,8 @@ for (const gone of ["Practice Areas", "RAG retrieval", "LLM Direct Bypass", "won
   say(!new RegExp(gone, "i").test(home + llms), "no \"" + gone + "\"");
 }
 
+say(!/>Practice Areas</.test(cv), "the CV page has no \"Practice Areas\" heading");
+
 console.log("structured data");
 say(!!data, "it parses");
 const person = (data && data.mainEntity) || {};
