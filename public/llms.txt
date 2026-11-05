@@ -1,89 +1,24 @@
-# davidfacer.com
+# David Facer
 
-The professional site of one person, David Facer: enterprise
-architecture and AI-native operating practice. The practice's models and
-assessments are published separately, at aimaturitymodels.com (below).
+David Facer is a product leader and enterprise architect. Since 2005 he has built product functions, owned platform APIs and run enterprise architecture at business-unit scope, at HP, NICE InContact, West Corporation and eLoyalty/TeleTech. He frames architecture as a capital investment judged by its return.
 
-This file is a guide for automated readers. It says what exists here and
-where. It does not reproduce the site — every page below serves its own
-readable text, except where marked CARRIED, which means the page itself
-delivers nothing to a reader without a browser and the substance is
-given here instead.
+This file is a plain index of what this site holds. It is written by hand, last revised 2026-11-04. If a line here disagrees with the page it describes, the page is right.
 
-WRITTEN BY HAND on 2026-09-12, last revised 2026-10-18. It is not
-generated from anything, so it can go stale. If a line here disagrees with the page it describes, the
-page is right.
+## This site
 
----
+- [Home](https://davidfacer.com/): product leadership as the frame, and how David works, in three areas, each ending on a proof.
+- [CV](https://davidfacer.com/professional/cv/): roles, dates and scope of responsibility.
+- [CV download](https://davidfacer.com/professional/cv/David_Facer_CV.pdf): the record behind the results on the home page, as a PDF.
+- [Prototypes](https://davidfacer.com/sampleprototypes/): the working prototypes.
+- [Economic Complexity & Sovereignty Assessment](https://davidfacer.com/complexity-sovereignty-assessment/): a prototype that applies an assessment method to nations, scoring each country for economic complexity and for sovereignty and strategic autonomy, with a reading of the gap between the two. The page renders in the browser, so this line carries what it is.
 
-## Professional
+## Published elsewhere
 
-/professional/cv/
-  Full curriculum vitae: roles, dates, scope of responsibility.
-  Substantial, and the most detailed single document on this domain.
-  Serves its own text.
-
-## Prototypes
-
-/sampleprototypes/
-  Index page describing the working prototypes. Serves its own text.
-  One is on this domain, the assessment below; the others are on a
-  separate subdomain:
-
-  https://prototypes.davidfacer.com/dinotherapy
-    Dinosaur Comics Therapy. A small interactive piece.
-
-  https://prototypes.davidfacer.com/nhltradesignal
-    NHL Trade Signal Dashboard. A data dashboard over NHL trade
-    activity. Serves substantial text.
-
-## Prototype on this domain
-
-/complexity-sovereignty-assessment/
-  CARRIED — this page is a client-rendered application. It returns an
-  empty document shell to anything that does not execute JavaScript, so
-  a pointer alone would send you to a blank page. What it is:
-
-  The Economic Complexity & Sovereignty Assessment is a prototype that
-  applies an assessment method to nations. Each country in its dataset
-  is scored for economic complexity and for sovereignty and strategic
-  autonomy, with a reading of the gap between the two and the
-  constraint that binds it. It is free to use.
-
-  A reader that can execute JavaScript should load the page itself;
-  this summary is not a substitute for it.
-
----
-
-## Related sites, separately published
-
-https://aimaturitymodels.com
-  The AI-Native Maturity Model family: open maturity models, each with
-  a whole-model view and a free self-assessment, plus Strata, the architectural
-  governance plane, and a set of function models. Its own
-  map, below, lists the models; this file does not, so that it cannot
-  fall behind them. This is a separate site with its own content.
-
-  It publishes its own files for AI readers: a map, and the full text
-  in one file, which CARRIES the model content in full:
-
-    https://aimaturitymodels.com/llms.txt       the map
-    https://aimaturitymodels.com/llms-full.txt  the full text
-
-  An automated reader wanting the models themselves should fetch the
-  full text, not this file.
-
-https://maturitymodel.substack.com/
-  Substack publication. External platform, separately published.
-
----
-
-## Notes for automated readers
-
-- Everything listed here is public. Nothing on this domain requires
-  sign-in to read.
-- /sitemap.xml lists this domain's main pages. It does not list the
-  prototype destinations above, which are on a subdomain.
-  This file is the more complete inventory of the two.
-- No identifier is named here that a reader cannot follow. Where this
-  practice has internal documents, they are not referenced.
+- [aimaturitymodels.com](https://aimaturitymodels.com): the AI-Native Maturity Model family, open models with free self-assessments, plus Strata, the architectural governance plane, and a set of function models. Its own map lists the models.
+- [The map](https://aimaturitymodels.com/llms.txt): that site's index.
+- [The full text](https://aimaturitymodels.com/llms-full.txt): the models' full text is there, not in this file.
+- [AI-Native SDLC Maturity Model](https://aimaturitymodels.com/models/sdlc/whole-model-view/): the model David wrote, in one view.
+- [Strata](https://aimaturitymodels.com/strata/): the governance plane.
+- [Professional Substack](https://maturitymodel.substack.com/): essays on product strategy, architecture, and how teams build.
+- [LinkedIn](https://www.linkedin.com/in/davidfacer): his profile.
+- [GitHub](https://github.com/superdtf-0882): his public repositories.

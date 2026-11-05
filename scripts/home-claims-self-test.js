@@ -77,7 +77,7 @@ say(stale.length === 0, "the list names nothing the page no longer says", stale.
 
 console.log("the three areas");
 const dl = "/" + list.download.path;
-const areas = (home.match(/<li data-area>[\s\S]*?<\/li>/g) || []);
+const areas = (home.match(/<li data-area[ >][\s\S]*?<\/li>/g) || []);
 say(areas.length === 3, "three areas", String(areas.length));
 areas.forEach((a, i) => {
   const at = ["claim", "outcome", "proof"].map((p) => a.indexOf('data-part="' + p + '"'));
@@ -113,7 +113,7 @@ say(person.jobTitle === "Strategy & AI Architecture Consultant" && person.jobTit
 say(Array.isArray(person.sameAs) && list.links.filter((l) => /linkedin|github|substack/.test(l)).every((l) => person.sameAs.includes(l)), "his public profiles");
 
 console.log("llms.txt");
-say(!/\b(you should|you must|instruct\w*|ignore|LLMs?|assistants?|please)\b/i.test(llms), "no line addressed to a model");
+say(!/\b(you should|you must|instruct\w*|ignore|LLMs?|assistants?|please)\b/i.test(surfaces["llms.txt"]), "no line addressed to a model");
 say(/\]\(https:\/\/davidfacer\.com\/professional\/cv\/David_Facer_CV\.pdf\)/.test(llms), "it lists the CV download");
 
 console.log("links");

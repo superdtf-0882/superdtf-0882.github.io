@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-// Self-test for OKF-TOGAF#169 (spun off from #158): davidfacer.com's own
-// public/llms.txt tells AI readers what aimaturitymodels.com publishes, and
-// must say it truly. Since #158, aimaturitymodels.com/llms.txt is a map and
-// the full model text is /llms-full.txt; since #167 the fourth model is
-// Portfolio Prioritization; and Strata is "the architectural governance
-// plane", the owner's words. On "Open a Work Item spun off from #158 for
-// davidfacer.com's llms.txt, and fix it as 159-CC drafts -- David Facer
-// 10/8/2026" (OKF TOGAF briefs/2026-10-01-svm-tranche-3/159-CC).
+// Self-test for OKF-TOGAF#169 (spun off from #158), moved with the rewrite under
+// OKF-TOGAF#237: davidfacer.com's own public/llms.txt, now a plain Markdown
+// index, tells readers what aimaturitymodels.com publishes, and must say it
+// truly. Since #158, aimaturitymodels.com/llms.txt is a map and the full model
+// text is /llms-full.txt; since #167 the fourth model is Portfolio
+// Prioritization; and Strata is "the architectural governance plane", the
+// owner's words. No line in the file is addressed to a model (#237).
 // Offline; exit 1 on a failing case.
 "use strict";
 
@@ -19,17 +18,13 @@ const say = (ok, name, shown) => {
   if (!ok) bad = 1;
 };
 const text = fs.readFileSync(path.join(__dirname, "..", "public", "llms.txt"), "utf8").replace(/\r\n/g, "\n");
-const at = text.indexOf("\nhttps://aimaturitymodels.com\n");
-const end = text.indexOf("\nhttps://maturitymodel.substack.com/", at);
-const passage = at >= 0 && end > at ? text.slice(at, end) : "";
+const at = text.indexOf("\n## Published elsewhere\n");
+const passage = at >= 0 ? text.slice(at) : "";
 
 say(!!passage, "the aimaturitymodels.com passage is found");
-say(/https:\/\/aimaturitymodels\.com\/llms-full\.txt\s+the full text/.test(passage), "it names /llms-full.txt as the full text");
-say(/https:\/\/aimaturitymodels\.com\/llms\.txt\s+the map/.test(passage), "it names /llms.txt as the map");
-say(/fetch the\s+full text, not this file/.test(passage), "it sends a reader wanting the models to the full text");
-say(!/CARRIES the model\s+content in full rather than pointing at it:\s+https:\/\/aimaturitymodels\.com\/llms\.txt/.test(passage), "it no longer says /llms.txt carries the models in full");
-// OKF-TOGAF#211: the passage no longer lists the models, so the current name
-// is not required; the retired one stays refused.
+say(/\[The full text\]\(https:\/\/aimaturitymodels\.com\/llms-full\.txt\)/.test(passage), "it names /llms-full.txt as the full text");
+say(/\[The map\]\(https:\/\/aimaturitymodels\.com\/llms\.txt\)/.test(passage), "it names /llms.txt as the map");
+say(/the models' full text is there, not in this file/.test(passage), "it says where the models' text is");
 say(!/Product Prioritization/.test(passage), "no retired model name");
 say(/Strata, the architectural\s+governance plane/.test(passage) && !/layered governance model/.test(passage), "Strata in the owner's words");
 
