@@ -27,15 +27,11 @@ page is right.
 
 /sampleprototypes/
   Index page describing the working prototypes. Serves its own text.
-  One is on this domain, the assessment below; the others are on a
+  One is on this domain, the assessment below; the other is on a
   separate subdomain:
 
   https://prototypes.davidfacer.com/dinotherapy
     Dinosaur Comics Therapy. A small interactive piece.
-
-  https://prototypes.davidfacer.com/nhltradesignal
-    NHL Trade Signal Dashboard. A data dashboard over NHL trade
-    activity. Serves substantial text.
 
 ## Prototype on this domain
 
