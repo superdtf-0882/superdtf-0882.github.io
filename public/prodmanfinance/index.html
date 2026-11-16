@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance for Product Managers — David Facer</title>
+<meta name="description" content="A tool for product managers to frame projects and initiatives in ways that will make their CFO love them.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230A0C10' stroke='%23B8924A' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23B8924A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: davidfacer.com's dark stage. A four-step chain across the top, then one step at a time: inputs on the left, the answer on the right. */
+:root {
+  /* davidfacer.com tokens (sampleprototypes/index.html) */
+  --ink: #0A0C10;
+  --panel: #14171D;
+  --panel-2: #191D24;
+  --hairline: #232730;
+  --paper: #ECEEF1;
+  --smoke: #C9CDD3;
+  --dim: #868C97;
+  --brass: #B8924A;
+  --brass-soft: rgba(184, 146, 74, 0.14);
+  /* semantic, kept apart from the brass accent */
+  --clear: #82B894;
+  --clear-soft: rgba(130, 184, 148, 0.12);
+  --short: #D3826C;
+  --short-soft: rgba(211, 130, 108, 0.12);
+  --display: "Fraunces", Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--ink); }
+body {
+  background: radial-gradient(ellipse 80% 60% at 50% 35%, #11141A 0%, #07080B 100%) fixed, var(--ink);
+  color: var(--smoke);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.backdrop { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.backdrop svg { width: 100%; height: 100%; }
+.name {
+  position: fixed; top: calc(20px + env(safe-area-inset-top, 0px)); left: max(20px, env(safe-area-inset-left, 0px));
+  z-index: 3; color: var(--dim); font-size: 13px; letter-spacing: 0.04em; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 10px; border-radius: 6px; padding: 4px 6px;
+}
+.name::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--brass); box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 5px var(--brass); }
+.name:hover { color: var(--paper); }
+.copyright { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: max(22px, env(safe-area-inset-right, 0px)); z-index: 3; color: rgba(134,140,151,0.6); font: 12px var(--mono); letter-spacing: 0.05em; }
+@media (max-width: 640px) { .copyright { display: none; } }
+
+main { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding-block: 96px 80px; }
+.eyebrow { font: 500 11.5px var(--mono); text-transform: uppercase; letter-spacing: 0.18em; color: var(--dim); margin: 0 0 14px; }
+h1 { font: 500 clamp(30px, 5vw, 42px)/1.15 var(--display); color: var(--paper); margin: 0 0 16px; text-wrap: balance; letter-spacing: -0.01em; }
+.lead { max-width: 64ch; margin: 0 0 36px; color: var(--smoke); font-size: 16px; }
+h2 { font: 500 24px/1.25 var(--display); color: var(--paper); margin: 0 0 6px; text-wrap: balance; }
+h3 { font: 500 11.5px var(--mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); margin: 0 0 14px; }
+p { margin: 0; }
+a { color: var(--brass); }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* The chain */
+.chain { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--hairline); border-radius: 14px; background: rgba(20,23,29,0.82); overflow: hidden; margin-bottom: 28px; }
+.link { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; position: relative; min-width: 0; }
+.link + .link { border-left: 1px solid var(--hairline); }
+.link + .link::before { content: "→"; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; font-size: 11px; line-height: 16px; text-align: center; color: var(--dim); background: var(--panel); border-radius: 50%; }
+.link:hover { background: rgba(255,255,255,0.02); }
+.link[aria-current="step"] { background: var(--brass-soft); }
+.link .k { font: 500 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); }
+.link .v { font: 500 24px/1.2 var(--display); color: var(--paper); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link .s { font-size: 12.5px; color: var(--dim); line-height: 1.4; }
+.link .v.clear { color: var(--clear); }
+.link .v.short { color: var(--short); }
+@media (max-width: 720px) {
+  .chain { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .link:nth-child(3) { border-left: 0; }
+  .link:nth-child(n+3) { border-top: 1px solid var(--hairline); }
+  .link:nth-child(3)::before { display: none; }
+}
+
+/* Steps */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab { font: 500 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.tab .n { font-family: var(--mono); font-size: 11.5px; margin-right: 6px; color: var(--brass); }
+.tab:hover { color: var(--paper); border-color: rgba(184,146,74,0.4); }
+.tab[aria-selected="true"] { color: var(--paper); border-color: var(--brass); background: var(--brass-soft); }
+.panel { background: var(--panel); border: 1px solid var(--hairline); border-radius: 18px; padding: 28px; }
+.panel-head { margin-bottom: 22px; max-width: 70ch; }
+.panel-head p { color: var(--smoke); }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 820px) { .cols { grid-template-columns: minmax(0, 1fr); } .panel { padding: 20px; } }
+
+/* Inputs */
+.field { display: grid; gap: 6px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--hairline); }
+.field:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.field label, .field .label { font-weight: 600; color: var(--paper); font-size: 14px; }
+.help { font-size: 13px; color: var(--dim); line-height: 1.5; }
+.help b { color: var(--smoke); font-weight: 500; }
+.num { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.num input { width: 84px; text-align: right; }
+.num span { font: 13px var(--mono); color: var(--dim); }
+input[type="number"], input[type="text"] {
+  background: var(--ink); color: var(--paper); border: 1px solid var(--hairline); border-radius: 8px;
+  padding: 6px 9px; font: 14px var(--mono); font-variant-numeric: tabular-nums;
+}
+input[type="number"]:focus { border-color: var(--brass); outline: none; }
+input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; }
+.presets { display: grid; gap: 8px; }
+.preset { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer; }
+.preset:hover { border-color: rgba(184,146,74,0.4); }
+.preset input { accent-color: var(--brass); margin-top: 4px; }
+.preset .t { color: var(--paper); font-weight: 500; font-size: 14px; }
+.preset .d { color: var(--dim); font-size: 12.5px; }
+.preset .p { margin-left: auto; font: 12.5px var(--mono); color: var(--brass); white-space: nowrap; }
+.preset:has(input:checked) { border-color: var(--brass); background: var(--brass-soft); }
+.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.check input { accent-color: var(--brass); margin-top: 4px; }
+
+.cash { display: grid; gap: 8px; }
+.cash-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: center; }
+.cash-row .yr { font: 12.5px var(--mono); color: var(--dim); }
+.cash-row input { width: 100%; text-align: right; }
+.cash-row.out input { border-color: rgba(211,130,108,0.45); }
+
+/* Results */
+.result { background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 14px; padding: 22px; }
+.result + .result, .result + .note, .note + .note { margin-top: 14px; }
+.big { font: 500 clamp(40px, 7vw, 54px)/1 var(--display); color: var(--paper); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; margin: 4px 0 10px; }
+.formula { font: 12.5px/1.6 var(--mono); color: var(--dim); overflow-wrap: anywhere; }
+.formula b { color: var(--smoke); font-weight: 500; }
+.note { border-left: 2px solid var(--brass); padding: 2px 0 2px 14px; color: var(--smoke); font-size: 14px; }
+.note .h { display: block; font: 500 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--brass); margin-bottom: 4px; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--hairline); margin-top: 16px; }
+.metric { padding: 12px 12px 0 0; min-width: 0; }
+.metric + .metric { padding-left: 12px; border-left: 1px solid var(--hairline); }
+.metric .k { font: 500 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); }
+.metric .v { font: 500 20px/1.3 var(--display); color: var(--paper); font-variant-numeric: tabular-nums; }
+.metric .s { font-size: 12px; color: var(--dim); line-height: 1.4; }
+.verdict { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: 0.12em; padding: 6px 12px; border-radius: 999px; border: 1px solid; }
+.verdict::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.verdict.clear { color: var(--clear); background: var(--clear-soft); }
+.verdict.short { color: var(--short); background: var(--short-soft); }
+.verdict.even { color: var(--brass); background: var(--brass-soft); }
+.verdict-text { margin-top: 10px; font-size: 14px; color: var(--smoke); }
+.warn { margin-top: 10px; font-size: 13px; color: var(--short); }
+.say { margin-top: 14px; padding: 16px; border: 1px dashed var(--hairline); border-radius: 12px; }
+.say p { font: 400 16px/1.55 var(--display); color: var(--paper); }
+.say .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.btn { font: 500 13px var(--sans); color: var(--ink); background: var(--brass); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--brass); border: 1px solid rgba(184,146,74,0.45); padding: 6px 11px; font-size: 12.5px; }
+.next { margin-top: 18px; display: flex; justify-content: flex-end; }
+.chart { width: 100%; height: auto; display: block; margin-top: 8px; }
+.chart text { font-family: var(--mono); font-size: 11px; fill: var(--dim); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--dim); margin-top: 6px; }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+
+.levers { display: grid; gap: 10px; margin-top: 18px; }
+.lever { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: 12px; }
+.lever .t { color: var(--paper); font-weight: 600; font-size: 14px; }
+.lever .r { font: 13px var(--mono); color: var(--smoke); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lever .d { grid-column: 1 / -1; font-size: 13.5px; color: var(--dim); }
+.lever.top { border-color: var(--brass); background: var(--brass-soft); }
+.lv-val { font: 13px var(--mono); color: var(--brass); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fine { margin-top: 28px; font-size: 13px; color: var(--dim); max-width: 75ch; }
+.back { margin-top: 40px; text-align: center; }
+.back a { color: var(--dim); font-size: 14px; text-decoration: none; }
+.back a:hover { color: var(--brass); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true">
+  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <path d="M-50,120 C180,90 320,150 560,115 C800,80 980,140 1220,105 C1400,80 1550,110 1650,95" stroke="#B8924A" stroke-opacity="0.045" stroke-width="1.1" fill="none"/>
+    <path d="M-50,210 C160,250 340,180 580,225 C820,270 1000,195 1240,235 C1420,265 1560,210 1650,230" stroke="#3A4150" stroke-opacity="0.07" stroke-width="1" fill="none"/>
+    <path d="M-50,330 C190,300 360,360 600,320 C840,280 1020,350 1260,310 C1440,280 1560,330 1650,305" stroke="#B8924A" stroke-opacity="0.04" stroke-width="1.1" fill="none"/>
+    <path d="M-50,460 C170,500 350,430 590,475 C830,520 1010,440 1250,485 C1430,515 1560,460 1650,480" stroke="#3A4150" stroke-opacity="0.06" stroke-width="1" fill="none"/>
+  </svg>
+</div>
+
+<a class="name" href="https://davidfacer.com/">David Facer</a>
+<div class="copyright">© 2026</div>
+
+<main>
+  <p class="eyebrow">Prototype · Will my project clear the bar?</p>
+  <h1>Finance for Product Managers</h1>
+  <p class="lead">Product managers need to master internal economics just as well as market economics. Every project requires capital, which has a price. Your project or initiative needs to earn more than that price. Here's how to think about it in terms your CFO will appreciate. The numbers below are an example; replace them with yours.</p>
+
+  <nav class="chain" aria-label="The chain from cost of money to decision">
+    <button class="link" data-go="1" type="button"><span class="k">Shareholders expect</span><span class="v" id="c-ke">—</span><span class="s">cost of equity</span></button>
+    <button class="link" data-go="2" type="button"><span class="k">Your bar</span><span class="v" id="c-h">—</span><span class="s" id="c-h-s">hurdle rate</span></button>
+    <button class="link" data-go="3" type="button"><span class="k">Your project creates</span><span class="v" id="c-npv">—</span><span class="s">net present value</span></button>
+    <button class="link" data-go="4" type="button"><span class="k">Biggest lever</span><span class="v" id="c-lever" style="font-size:19px">—</span><span class="s" id="c-lever-s">what moves it most</span></button>
+  </nav>
+
+  <div class="tabs" role="tablist" aria-label="Steps">
+    <button class="tab" role="tab" id="tab-1" aria-controls="p-1" aria-selected="true" type="button"><span class="n">1</span>What shareholders expect</button>
+    <button class="tab" role="tab" id="tab-2" aria-controls="p-2" aria-selected="false" tabindex="-1" type="button"><span class="n">2</span>The bar to clear</button>
+    <button class="tab" role="tab" id="tab-3" aria-controls="p-3" aria-selected="false" tabindex="-1" type="button"><span class="n">3</span>Your project's cash</button>
+    <button class="tab" role="tab" id="tab-4" aria-controls="p-4" aria-selected="false" tabindex="-1" type="button"><span class="n">4</span>What moves the answer</button>
+  </div>
+
+  <!-- Step 1 -->
+  <section class="panel" role="tabpanel" id="p-1" aria-labelledby="tab-1">
+    <div class="panel-head">
+      <h2>What shareholders expect from your company</h2>
+      <p>Shareholders could put their money in an index fund instead. The <b>cost of equity</b> is the return they expect from your company to make its extra risk worth taking. Finance estimates it with a formula called CAPM: a safe return, plus a reward for risk, scaled by how much your company's stock swings.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="field">
+          <div class="field-top"><label for="rf-n">Safe return</label><span class="num"><input id="rf-n" type="number" step="0.1" min="0" max="10"><span>%</span></span></div>
+          <input id="rf" type="range" min="0" max="8" step="0.1" aria-label="Safe return">
+          <p class="help">The yield on 10-year US Treasury bonds: what an investor earns with essentially no risk. Finance teams call it the <b>risk-free rate</b>. Look up today's yield.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="beta-n">How much your stock swings</label><span class="num"><input id="beta-n" type="number" step="0.05" min="0" max="4"><span>×</span></span></div>
+          <input id="beta" type="range" min="0.3" max="2.5" step="0.05" aria-label="How much your stock swings">
+          <p class="help">Called <b>beta</b>. 1.0 moves with the market; 1.5 rises and falls 50% more than the market. Private company? Finance uses similar public companies. Software firms often sit between 1.1 and 1.4.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="mkt-n">Stock market's expected return</label><span class="num"><input id="mkt-n" type="number" step="0.1" min="0" max="20"><span>%</span></span></div>
+          <input id="mkt" type="range" min="5" max="14" step="0.1" aria-label="Stock market's expected return">
+          <p class="help">The long-run yearly return expected from the market as a whole, such as the S&amp;P 500. Most analysts use 8 to 10%.</p>
+        </div>
+      </div>
+      <div>
+        <div class="result" aria-live="polite">
+          <h3>Cost of equity</h3>
+          <div class="big" id="r-ke">—</div>
+          <p class="formula" id="f-ke"></p>
+        </div>
+        <p class="note"><span class="h">In plain terms</span>The market pays <span id="erp">—</span> a year over the safe return for taking stock-market risk. Your company's shareholders want that reward times your stock's swing, on top of the safe return.</p>
+        <p class="note"><span class="h">Why a PM cares</span>This is the expensive half of the company's money. It's usually well above the interest rate on a loan, which is why "we have the cash" doesn't make a project free.</p>
+        <div class="next"><button class="btn" data-go="2" type="button">Next: the bar to clear →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="panel" role="tabpanel" id="p-2" aria-labelledby="tab-2" hidden>
+    <div class="panel-head">
+      <h2>The bar your project has to clear</h2>
+      <p>Your company pays for everything with a mix of borrowed money and shareholders' money. The blended cost of the two is the <b>weighted average cost of capital</b>, or WACC. A project that earns less than this is spending money that costs more than it makes.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="field">
+          <div class="field-top"><label for="eq-n">Share funded by shareholders</label><span class="num"><input id="eq-n" type="number" step="1" min="0" max="100"><span>%</span></span></div>
+          <input id="eq" type="range" min="0" max="100" step="1" aria-label="Share funded by shareholders">
+          <p class="help">Of every dollar funding the company, how much comes from shareholders rather than lenders, at today's market values. Public company: market value ÷ (market value + debt). Otherwise, ask finance. <b>Borrowed: <span id="debt-share">—</span></b></p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="kd-n">Interest rate on new borrowing</label><span class="num"><input id="kd-n" type="number" step="0.1" min="0" max="20"><span>%</span></span></div>
+          <input id="kd" type="range" min="0" max="15" step="0.1" aria-label="Interest rate on new borrowing">
+          <p class="help">What the company would pay to borrow today, not the rate on old loans. Finance knows it.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="tax-n">Tax rate</label><span class="num"><input id="tax-n" type="number" step="1" min="0" max="50"><span>%</span></span></div>
+          <input id="tax" type="range" min="0" max="40" step="1" aria-label="Tax rate">
+          <p class="help">Interest is tax-deductible, so debt costs less than its rate. US federal is 21%; with state taxes, many companies land near 25%.</p>
+        </div>
+        <div class="field">
+          <span class="label" id="risk-label">How risky is this project, compared with your core business?</span>
+          <p class="help">WACC is the bar for a project as risky as the business already is. A new product or market is usually riskier, so it has to clear a higher bar.</p>
+          <div class="presets" role="radiogroup" aria-labelledby="risk-label">
+            <label class="preset"><input type="radio" name="risk" value="-1.5"><span><span class="t">Safer</span><br><span class="d">Cost savings or upkeep on something proven</span></span><span class="p">−1.5 pts</span></label>
+            <label class="preset"><input type="radio" name="risk" value="0"><span><span class="t">About the same</span><br><span class="d">Improving a product customers already buy</span></span><span class="p">+0 pts</span></label>
+            <label class="preset"><input type="radio" name="risk" value="3"><span><span class="t">Riskier</span><br><span class="d">A new product, segment or market</span></span><span class="p">+3 pts</span></label>
+            <label class="preset"><input type="radio" name="risk" value="6"><span><span class="t">Much riskier</span><br><span class="d">Unproven technology or business model</span></span><span class="p">+6 pts</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="check"><input id="given" type="checkbox"><span><span class="label">Finance gave me a hurdle rate</span><br><span class="help">Many companies publish one. If yours does, use it instead.</span></span></label>
+          <div class="field-top" id="given-row" hidden><label for="given-n">Company hurdle rate</label><span class="num"><input id="given-n" type="number" step="0.1" min="0" max="40"><span>%</span></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="result" aria-live="polite">
+          <h3 id="h-title">Your project's hurdle rate</h3>
+          <div class="big" id="r-h">—</div>
+          <p class="formula" id="f-wacc"></p>
+        </div>
+        <p class="note"><span class="h">In plain terms</span>Every dollar this project spends costs the company about <span id="cents">—</span> a year. To create value, the project has to earn more than that.</p>
+        <p class="note"><span class="h">Ask finance</span>Finance teams are glad when a product manager asks how projects are judged. Ask for the company's hurdle rate and how it changes with risk. It's the start of a better conversation.</p>
+        <div class="next"><button class="btn" data-go="3" type="button">Next: your project's cash →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="panel" role="tabpanel" id="p-3" aria-labelledby="tab-3" hidden>
+    <div class="panel-head">
+      <h2>Your project's cash, against the bar</h2>
+      <p>Enter what the project costs up front, then the <b>extra cash</b> it brings in each year: new revenue or savings, minus the project's own running costs and taxes. Not revenue alone. A year can be negative if the project still costs more than it brings in.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="field">
+          <span class="label">Cash by year</span>
+          <div class="cash">
+            <div class="cash-row out"><label class="yr" for="inv">Upfront</label><input id="inv" type="number" step="1000" min="0" inputmode="numeric" aria-describedby="inv-h"></div>
+            <div class="cash-row"><label class="yr" for="cf1">Year 1</label><input id="cf1" type="number" step="1000" inputmode="numeric"></div>
+            <div class="cash-row"><label class="yr" for="cf2">Year 2</label><input id="cf2" type="number" step="1000" inputmode="numeric"></div>
+            <div class="cash-row"><label class="yr" for="cf3">Year 3</label><input id="cf3" type="number" step="1000" inputmode="numeric"></div>
+            <div class="cash-row"><label class="yr" for="cf4">Year 4</label><input id="cf4" type="number" step="1000" inputmode="numeric"></div>
+            <div class="cash-row"><label class="yr" for="cf5">Year 5</label><input id="cf5" type="number" step="1000" inputmode="numeric"></div>
+          </div>
+          <p class="help" id="inv-h">Upfront is what you spend before the project earns anything: build cost, launch, hardware. Enter it as a positive number.</p>
+        </div>
+        <div class="field">
+          <label class="check"><input id="tv" type="checkbox"><span><span class="label">Count value after year 5</span><br><span class="help">Products often keep earning. This assumes year 5's cash continues and grows steadily. It can be most of the value, so finance will check it closely.</span></span></label>
+          <div id="tv-row" hidden>
+            <div class="field-top" style="margin-top:10px"><label for="g-n">Yearly growth after year 5</label><span class="num"><input id="g-n" type="number" step="0.5" min="-5" max="6"><span>%</span></span></div>
+            <input id="g" type="range" min="-3" max="5" step="0.5" aria-label="Yearly growth after year 5">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="result" aria-live="polite">
+          <h3>Value created, after the cost of money</h3>
+          <div class="big" id="r-npv">—</div>
+          <span class="verdict" id="verdict">—</span>
+          <p class="verdict-text" id="verdict-text"></p>
+          <p class="warn" id="irr-warn" hidden></p>
+          <div class="metrics">
+            <div class="metric"><div class="k">Yearly return</div><div class="v" id="r-irr">—</div><div class="s">IRR, against your <span id="r-h2">—</span> bar</div></div>
+            <div class="metric"><div class="k">Payback</div><div class="v" id="r-pb">—</div><div class="s">cash back</div></div>
+            <div class="metric"><div class="k">Payback, cost of money</div><div class="v" id="r-dpb">—</div><div class="s">discounted</div></div>
+          </div>
+        </div>
+        <div class="result">
+          <h3>Cash in the bank, year by year</h3>
+          <svg class="chart" id="chart" viewBox="0 0 440 210" role="img" aria-label="Cumulative cash by year"></svg>
+          <div class="legend"><span><i style="border-color:var(--smoke);border-top-style:dashed"></i>Cash back</span><span><i style="border-color:var(--brass)"></i>After the cost of money</span></div>
+        </div>
+        <div class="say">
+          <div class="row"><h3 style="margin:0">Say it to your CFO</h3><button class="btn ghost" id="copy" type="button">Copy</button></div>
+          <p id="say"></p>
+        </div>
+        <p class="note" style="margin-top:14px"><span class="h">NPV and IRR</span><b>NPV</b> is the dollars of value left after paying for the money. <b>IRR</b> is the project's own yearly return. They agree on a single project, but when you compare projects of different sizes, trust NPV: a small project can have the higher IRR and still create less value.</p>
+        <div class="next"><button class="btn" data-go="4" type="button">Next: what moves the answer →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4 -->
+  <section class="panel" role="tabpanel" id="p-4" aria-labelledby="tab-4" hidden>
+    <div class="panel-head">
+      <h2>What moves the answer</h2>
+      <p>Each lever is something a product manager can change. Pull them below and watch the project's value move from today's <b id="base-npv">—</b>. The chart under them shows which lever matters most for this project.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="field">
+          <div class="field-top"><label for="lv-shift">When the cash arrives</label><span class="lv-val" id="lv-shift-v">On plan</span></div>
+          <input id="lv-shift" type="range" min="-12" max="12" step="1" value="0">
+          <p class="help">Slide left to ship sooner, right for a slip. Moves every year's cash, and the value after year 5 if counted.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="lv-scale">Yearly cash</label><span class="lv-val" id="lv-scale-v">As planned</span></div>
+          <input id="lv-scale" type="range" min="-50" max="50" step="5" value="0">
+          <p class="help">Adoption, pricing and retention all land here.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="lv-inv">Upfront spend</label><span class="lv-val" id="lv-inv-v">As planned</span></div>
+          <input id="lv-inv" type="range" min="-50" max="50" step="5" value="0">
+          <p class="help">Build less before proving demand, or find the scope you can cut.</p>
+        </div>
+        <div class="field">
+          <div class="field-top"><label for="lv-bump">How risky finance judges it</label><span class="lv-val" id="lv-bump-v">As set in step 2</span></div>
+          <input id="lv-bump" type="range" min="-4" max="4" step="0.5" value="0">
+          <p class="help">Evidence lowers the bar: a pilot, a design partner, signed letters of intent.</p>
+        </div>
+      </div>
+      <div>
+        <div class="result" aria-live="polite">
+          <h3>Your scenario</h3>
+          <div class="big" id="s-npv">—</div>
+          <span class="verdict" id="s-verdict">—</span>
+          <div class="metrics">
+            <div class="metric"><div class="k">Change</div><div class="v" id="s-delta">—</div><div class="s">against today</div></div>
+            <div class="metric"><div class="k">Yearly return</div><div class="v" id="s-irr">—</div><div class="s">against a <span id="s-h">—</span> bar</div></div>
+            <div class="metric"><div class="k">Payback</div><div class="v" id="s-pb">—</div><div class="s">cash back</div></div>
+          </div>
+        </div>
+        <div class="say">
+          <div class="row"><h3 style="margin:0">Say it to your CFO</h3><button class="btn ghost" id="copy2" type="button">Copy</button></div>
+          <p id="say2"></p>
+        </div>
+        <div class="next"><button class="btn ghost" id="lv-reset" type="button">Reset the levers</button></div>
+      </div>
+    </div>
+    <div class="result" style="margin-top:22px">
+      <h3>Which lever matters most</h3>
+      <svg class="chart" id="tornado" viewBox="0 0 680 250" role="img" aria-label="How far each lever moves the project's value"></svg>
+      <div class="legend"><span><i style="border-color:var(--short);border-top-width:8px"></i>Downside</span><span><i style="border-color:var(--clear);border-top-width:8px"></i>Upside</span><span><i style="border-color:var(--brass)"></i>Today's value</span><span><i style="border-color:var(--paper);border-top-style:dashed"></i>Your scenario</span></div>
+      <p class="help" style="margin-top:8px">Each bar runs from the lever's downside case to its upside case, holding the others at plan.</p>
+    </div>
+    <div class="levers" id="levers"></div>
+    <p class="fine">A teaching tool, not a valuation. Real business cases model cash by quarter, include working capital and the costs the project shares with others, and are reviewed with finance. The numbers start as an example and stay in this page only.</p>
+  </section>
+
+  <p class="back"><a href="https://davidfacer.com/sampleprototypes/">← Prototypes</a></p>
+</main>
+
+<script src="/prodmanfinance/finance.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const S = {
+    rf: 4.0, beta: 1.2, mkt: 9.0,
+    eq: 70, kd: 6.0, tax: 25, adj: 3, useGiven: false, given: 10,
+    inv: 250000, cf: [-20000, 60000, 100000, 130000, 140000],
+    tv: false, g: 2,
+  };
+
+  // ---------- formatting ----------
+  const pct = (x, d = 1) => (Number.isFinite(x) ? x.toFixed(d) + '%' : '—');
+  const money = (x) => {
+    if (!Number.isFinite(x)) return '—';
+    const a = Math.abs(x), s = x < 0 ? '−' : '';
+    if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M';
+    if (a >= 1e3) return s + '$' + Math.round(a / 1e3) + 'K';
+    return s + '$' + Math.round(a);
+  };
+  const years = (y) => (y === null ? 'Not in 5 yrs' : y.toFixed(1) + ' yrs');
+
+  // ---------- finance: the sums live in /prodmanfinance/finance.js, tested in the site's build ----------
+  const F = window.Finance;
+  const ke = () => F.costOfEquity(S.rf, S.beta, S.mkt);
+  const wacc = () => F.wacc(ke(), S.eq, S.kd, S.tax);
+  const hurdle = (bump = 0) => F.hurdle(wacc(), S.adj, S.useGiven, S.given, bump);
+  const flows = (r, o = {}) => F.flows(S, r, o);
+  const pv = (f, r) => F.pv(f, r);
+  const npv = (o = {}) => F.npvAt(S, hurdle(o.bump || 0), o);
+  const irr = (f) => F.irr(f);
+  const signChanges = (f) => F.signChanges(f);
+  const payback = (r) => F.payback(S.inv, S.cf, r);
+  const cumulative = (r) => F.cumulative(S.inv, S.cf, r);
+
+  // ---------- charts ----------
+  function niceTicks(min, max, n) {
+    const span = max - min || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+    const out = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(Math.abs(v) < 1e-9 ? 0 : v);
+    return out;
+  }
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, text) {
+    const e = document.createElementNS(NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function drawCash(r) {
+    const svg = $('chart'); svg.replaceChildren();
+    const W = 440, H = 210, L = 54, R = 14, T = 12, B = 28;
+    const { u, d } = cumulative(r);
+    const all = u.concat(d, [0]);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+    const ticks = niceTicks(lo, hi, 5);
+    lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+    const x = (t) => L + (t / 5) * (W - L - R);
+    const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    ticks.forEach((v) => {
+      svg.append(el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? '#3A4150' : '#1E222A', 'stroke-width': v === 0 ? 1.2 : 1 }));
+      svg.append(el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, money(v)));
+    });
+    for (let t = 0; t <= 5; t++) svg.append(el('text', { x: x(t), y: H - 8, 'text-anchor': 'middle' }, t === 0 ? 'Start' : 'Yr ' + t));
+    const path = (arr) => arr.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+    svg.append(el('path', { d: path(u), fill: 'none', stroke: '#C9CDD3', 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }));
+    svg.append(el('path', { d: path(d), fill: 'none', stroke: '#B8924A', 'stroke-width': 2.2 }));
+    d.forEach((v, i) => svg.append(el('circle', { cx: x(i), cy: y(v), r: i === 5 ? 3.5 : 2.2, fill: '#B8924A' })));
+    const pb = payback(r);
+    if (pb !== null) {
+      const px = x(pb);
+      svg.append(el('line', { x1: px, x2: px, y1: y(0) - 6, y2: y(0) + 6, stroke: '#ECEEF1', 'stroke-width': 1.5 }));
+      svg.append(el('text', { x: Math.min(px, W - R - 40), y: y(0) - 10, 'text-anchor': 'middle', fill: '#ECEEF1' }, 'paid back'));
+    }
+  }
+
+  function levers() {
+    const base = npv();
+    const L = [
+      { name: 'Timing', down: npv({ shift: 0.5 }), up: npv({ shift: -0.5 }), dl: '6 months later', ul: '6 months sooner',
+        d: 'Ship a smaller first release sooner, so cash starts earlier. Every month of delay costs money even if the totals don’t change.' },
+      { name: 'Adoption', down: npv({ scale: 0.8 }), up: npv({ scale: 1.2 }), dl: '20% less cash a year', ul: '20% more cash a year',
+        d: 'Pick a sharper first segment, price for value, and plan the launch with marketing early. This moves every year’s cash at once.' },
+      { name: 'Upfront cost', down: npv({ inv: 1.2 }), up: npv({ inv: 0.8 }), dl: '20% more spend', ul: '20% less spend',
+        d: 'Phase the investment: build only what proves demand, then fund the rest. Money not spent yet is money not at risk.' },
+      { name: 'Risk', down: npv({ bump: 2 }), up: npv({ bump: -2 }), dl: 'bar 2 points higher', ul: 'bar 2 points lower',
+        d: 'Run a pilot or sign a design partner before full funding. Evidence of demand is what lets finance judge the project as less risky.' },
+    ].map((l) => ({ ...l, swing: Math.abs(l.up - l.down) }))
+     .filter((l) => Number.isFinite(l.swing))
+     .sort((a, b) => b.swing - a.swing);
+    return { base, L };
+  }
+
+  function drawTornado(base, L) {
+    const svg = $('tornado'); svg.replaceChildren();
+    const W = 680, rowH = 50, T = 22, B = 28, left = 128, right = 20;
+    const H = T + rowH * L.length + B + 16;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const scv = npv(lvOpts());
+    const vals = L.flatMap((l) => [l.up, l.down]).concat([base, 0], Number.isFinite(scv) ? [scv] : []);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
+    const ticks = niceTicks(lo, hi, 5);
+    lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+    const x = (v) => left + ((v - lo) / (hi - lo)) * (W - left - right);
+    ticks.forEach((v) => {
+      svg.append(el('line', { x1: x(v), x2: x(v), y1: T - 6, y2: H - B, stroke: v === 0 ? '#3A4150' : '#1E222A' }));
+      svg.append(el('text', { x: x(v), y: H - 8, 'text-anchor': 'middle' }, money(v)));
+    });
+    L.forEach((l, i) => {
+      const cy = T + i * rowH + rowH / 2;
+      svg.append(el('text', { x: 0, y: cy + 4, fill: '#ECEEF1', 'font-size': 12.5 }, l.name));
+      const bar = (v, color) => {
+        const a = Math.min(x(v), x(base)), w = Math.max(1.5, Math.abs(x(v) - x(base)));
+        svg.append(el('rect', { x: a, y: cy - 11, width: w, height: 22, rx: 3, fill: color, 'fill-opacity': 0.85 }));
+      };
+      bar(l.down, '#D3826C'); bar(l.up, '#82B894');
+      const dl = x(l.down) < x(base) ? { x: x(l.down) - 6, a: 'end' } : { x: x(l.down) + 6, a: 'start' };
+      const ul = x(l.up) >= x(base) ? { x: x(l.up) + 6, a: 'start' } : { x: x(l.up) - 6, a: 'end' };
+      svg.append(el('text', { x: dl.x, y: cy + 4, 'text-anchor': dl.a }, money(l.down)));
+      svg.append(el('text', { x: ul.x, y: cy + 4, 'text-anchor': ul.a }, money(l.up)));
+    });
+    svg.append(el('line', { x1: x(base), x2: x(base), y1: T - 10, y2: H - B, stroke: '#B8924A', 'stroke-width': 2 }));
+    svg.append(el('text', { x: x(base), y: T - 12, 'text-anchor': 'middle', fill: '#B8924A' }, 'today ' + money(base)));
+    const sc = npv(lvOpts());
+    if (Number.isFinite(sc) && Math.abs(sc - base) > 0.5) {
+      const sx = Math.max(left, Math.min(W - right, x(sc)));
+      svg.append(el('line', { x1: sx, x2: sx, y1: T - 4, y2: H - B - 16, stroke: '#ECEEF1', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }));
+      svg.append(el('text', { x: sx, y: H - B - 2, 'text-anchor': sx > W * 0.7 ? 'end' : sx < left + 60 ? 'start' : 'middle', fill: '#ECEEF1' }, 'yours ' + money(sc)));
+    }
+  }
+
+  // ---------- your scenario ----------
+  const LV = { shift: 0, scale: 0, inv: 0, bump: 0 };
+  const lvOpts = () => ({ shift: LV.shift / 12, scale: 1 + LV.scale / 100, inv: 1 + LV.inv / 100, bump: LV.bump });
+  const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '');
+  function lvLabels() {
+    $('lv-shift-v').textContent = LV.shift === 0 ? 'On plan' : Math.abs(LV.shift) + (Math.abs(LV.shift) === 1 ? ' month ' : ' months ') + (LV.shift < 0 ? 'sooner' : 'later');
+    $('lv-scale-v').textContent = LV.scale === 0 ? 'As planned' : sgn(LV.scale) + Math.abs(LV.scale) + '% a year';
+    $('lv-inv-v').textContent = LV.inv === 0 ? 'As planned' : sgn(LV.inv) + Math.abs(LV.inv) + '%';
+    $('lv-bump-v').textContent = LV.bump === 0 ? 'As set in step 2' : (LV.bump < 0 ? 'Bar ' : 'Bar ') + sgn(LV.bump) + Math.abs(LV.bump) + ' pts';
+  }
+  function renderScenario(base) {
+    lvLabels();
+    const o = lvOpts(), h = hurdle(o.bump), f = flows(h, o);
+    const n = f ? pv(f, h) : NaN, r = f ? irr(f) : null;
+    const tol = Math.max(1, S.inv * o.inv * 0.005);
+    $('s-npv').textContent = money(n);
+    const d = n - base;
+    $('s-delta').textContent = Math.abs(d) < 0.5 ? '—' : sgn(d) + money(Math.abs(d));
+    $('s-delta').style.color = d > 0.5 ? 'var(--clear)' : d < -0.5 ? 'var(--short)' : '';
+    $('s-irr').textContent = r === null || (f && signChanges(f) > 1) ? '—' : pct(r);
+    $('s-h').textContent = pct(h);
+    // payback with the scenario's cash and spend, timing shifted
+    let cum = -S.inv * o.inv, pb = null;
+    for (let i = 0; i < 5; i++) { const v = S.cf[i] * o.scale; if (cum + v >= 0 && v > 0) { pb = i + (-cum) / v + o.shift; break; } cum += v; }
+    $('s-pb').textContent = pb === null ? 'Not in 5 yrs' : Math.max(0, pb).toFixed(1) + ' yrs';
+    const v = $('s-verdict');
+    if (!f) { v.className = 'verdict even'; v.textContent = 'Check growth'; }
+    else if (n > tol) { v.className = 'verdict clear'; v.textContent = 'Clears the bar'; }
+    else if (n < -tol) { v.className = 'verdict short'; v.textContent = "Doesn't clear the bar on cash alone"; }
+    else { v.className = 'verdict even'; v.textContent = 'Breaks even'; }
+    const moves = [];
+    if (LV.shift) moves.push(LV.shift < 0 ? `ship ${Math.abs(LV.shift)} months sooner` : `slip ${LV.shift} months`);
+    if (LV.scale) moves.push(`${LV.scale > 0 ? 'raise' : 'lose'} ${Math.abs(LV.scale)}% of yearly cash`);
+    if (LV.inv) moves.push(`${LV.inv < 0 ? 'cut' : 'add'} ${Math.abs(LV.inv)}% ${LV.inv < 0 ? 'from' : 'to'} the upfront spend`);
+    if (LV.bump) moves.push(LV.bump < 0 ? `show enough evidence to lower the bar ${Math.abs(LV.bump)} points` : `face a bar ${LV.bump} points higher`);
+    const list = moves.length > 1 ? moves.slice(0, -1).join(', ') + ' and ' + moves[moves.length - 1] : moves[0];
+    $('say2').textContent = !f ? 'Set growth after year 5 below the hurdle rate to see the summary.'
+      : !moves.length ? `Pull a lever to see what it does. Today the project ${base >= 0 ? 'creates' : 'falls short by'} ${money(Math.abs(base))} of value at our ${pct(hurdle())} hurdle rate.`
+      : `If we ${list}, the project's value goes from ${money(base)} to ${money(n)}${n > tol && base <= tol ? ', and it clears the bar' : n < -tol && base >= -tol ? ', and it no longer clears the bar' : ''}.`;
+  }
+  ['shift', 'scale', 'inv', 'bump'].forEach((k) => {
+    $('lv-' + k).addEventListener('input', (e) => { LV[k] = parseFloat(e.target.value); render(); });
+  });
+  $('lv-reset').addEventListener('click', () => {
+    ['shift', 'scale', 'inv', 'bump'].forEach((k) => { LV[k] = 0; $('lv-' + k).value = 0; });
+    render();
+  });
+  $('copy2').addEventListener('click', async () => {
+    const b = $('copy2'), text = $('say2').textContent;
+    try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; }
+    catch (err) {
+      const range = document.createRange(); range.selectNodeContents($('say2'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); b.textContent = 'Selected';
+    }
+    setTimeout(() => (b.textContent = 'Copy'), 1600);
+  });
+
+  // ---------- render ----------
+  function render() {
+    const k = ke(), w = wacc(), h = hurdle();
+    $('c-ke').textContent = pct(k);
+    $('r-ke').textContent = pct(k, 2);
+    $('erp').textContent = pct(S.mkt - S.rf);
+    $('f-ke').innerHTML = `<b>${pct(S.rf)}</b> safe return + <b>${S.beta.toFixed(2)}</b> swing × (<b>${pct(S.mkt)}</b> market − <b>${pct(S.rf)}</b> safe) = <b>${pct(k, 2)}</b>`;
+
+    $('debt-share').textContent = (100 - S.eq) + '%';
+    $('c-h').textContent = pct(h);
+    $('r-h').textContent = pct(h, 2);
+    $('r-h2').textContent = pct(h);
+    $('cents').textContent = (h).toFixed(1) + '¢';
+    const e = S.eq / 100;
+    $('h-title').textContent = S.useGiven ? 'Company hurdle rate' : "Your project's hurdle rate";
+    $('c-h-s').textContent = S.useGiven ? "finance's hurdle rate" : 'WACC ' + pct(w) + (S.adj ? (S.adj > 0 ? ' + ' : ' − ') + Math.abs(S.adj) + ' pts risk' : '');
+    $('f-wacc').innerHTML = S.useGiven
+      ? `Set by finance. For comparison, the WACC from these inputs is <b>${pct(w, 2)}</b>.`
+      : `WACC = <b>${(e * 100).toFixed(0)}%</b> × <b>${pct(k)}</b> shareholders + <b>${((1 - e) * 100).toFixed(0)}%</b> × <b>${pct(S.kd)}</b> × (1 − ${S.tax}% tax) borrowed = <b>${pct(w, 2)}</b>` +
+        `<br>Risk adjustment for this project: <b>${S.adj >= 0 ? '+' : '−'}${Math.abs(S.adj)} pts</b> → hurdle <b>${pct(h, 2)}</b>`;
+
+    const f = flows(h);
+    const tvBad = S.tv && !f;
+    const n = tvBad ? NaN : pv(f, h);
+    const r = tvBad ? null : irr(f);
+    const pb = payback(0), dpb = payback(h);
+    const tol = Math.max(1, S.inv * 0.005);
+
+    $('r-npv').textContent = money(n);
+    $('c-npv').textContent = money(n);
+    const v = $('verdict'), vt = $('verdict-text');
+    $('c-npv').className = 'v ' + (n > tol ? 'clear' : n < -tol ? 'short' : '');
+    if (tvBad) {
+      v.className = 'verdict even'; v.textContent = 'Check growth';
+      vt.textContent = 'Growth after year 5 has to be below the hurdle rate, or the value after year 5 would be infinite. Lower the growth rate.';
+    } else if (n > tol) {
+      v.className = 'verdict clear'; v.textContent = 'Clears the bar';
+      vt.textContent = `After paying for the money it uses, the project leaves ${money(n)} of value for the company.`;
+    } else if (n < -tol) {
+      v.className = 'verdict short'; v.textContent = "Doesn't clear the bar on cash alone";
+      vt.textContent = `The cash falls ${money(-n)} short of paying for the money it uses. That doesn't settle it: strategic and defensive projects can be worth doing. But you're making a different argument now, so name what the company gets that isn't in these numbers.`;
+    } else {
+      v.className = 'verdict even'; v.textContent = 'Breaks even';
+      vt.textContent = 'The project earns about what its money costs. It neither creates nor destroys value on cash alone.';
+    }
+    $('r-irr').textContent = r === null ? '—' : pct(r);
+    const w2 = $('irr-warn');
+    if (!tvBad && signChanges(f) > 1) { w2.hidden = false; w2.textContent = 'This project’s cash changes direction more than once, so it can have more than one IRR. Trust the value figure, not the percentage.'; }
+    else if (!tvBad && r === null) { w2.hidden = false; w2.textContent = 'No single yearly return fits this cash. Trust the value figure.'; }
+    else w2.hidden = true;
+    $('r-pb').textContent = years(pb);
+    $('r-dpb').textContent = years(dpb);
+    drawCash(h);
+
+    const life = S.tv ? 'its life' : 'five years';
+    let say;
+    if (tvBad) say = 'Set growth after year 5 below the hurdle rate to see the summary.';
+    else {
+      say = `At our ${pct(h)} hurdle rate, this project ${n >= 0 ? 'creates' : 'falls short by'} ${money(Math.abs(n))} of value over ${life}`;
+      if (r !== null && signChanges(f) <= 1) say += `, a yearly return of ${pct(r)}`;
+      say += pb !== null ? `, and pays back its ${money(S.inv)} in ${pb.toFixed(1)} years.` : `, and doesn't pay back its ${money(S.inv)} within five years.`;
+    }
+    $('say').textContent = say;
+
+    const { base, L } = levers();
+    $('base-npv').textContent = money(base);
+    renderScenario(base);
+    if (L.length) {
+      drawTornado(base, L);
+      const top = L[0];
+      $('c-lever').textContent = top.name;
+      $('c-lever-s').textContent = 'moves value by ' + money(top.swing);
+      $('levers').replaceChildren(...L.map((l, i) => {
+        const d = document.createElement('div');
+        d.className = 'lever' + (i === 0 ? ' top' : '');
+        d.innerHTML = `<span class="t"></span><span class="r"></span><p class="d"></p>`;
+        d.querySelector('.t').textContent = (i === 0 ? 'Biggest lever: ' : '') + l.name;
+        d.querySelector('.r').textContent = `${money(l.down)} to ${money(l.up)}`;
+        d.querySelector('.d').textContent = `${cap(l.dl)} to ${l.ul}. ${l.d}`;
+        return d;
+      }));
+    } else {
+      $('tornado').replaceChildren(); $('levers').replaceChildren();
+      $('c-lever').textContent = '—'; $('c-lever-s').textContent = 'set growth below the bar';
+    }
+  }
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // ---------- inputs ----------
+  function pair(key, rangeId, numId) {
+    const r = $(rangeId), n = $(numId);
+    r.value = S[key]; n.value = S[key];
+    r.addEventListener('input', () => { S[key] = parseFloat(r.value); n.value = r.value; render(); });
+    n.addEventListener('input', () => { const v = parseFloat(n.value); if (Number.isFinite(v)) { S[key] = v; r.value = v; render(); } });
+  }
+  pair('rf', 'rf', 'rf-n'); pair('beta', 'beta', 'beta-n'); pair('mkt', 'mkt', 'mkt-n');
+  pair('eq', 'eq', 'eq-n'); pair('kd', 'kd', 'kd-n'); pair('tax', 'tax', 'tax-n'); pair('g', 'g', 'g-n');
+  document.querySelectorAll('input[name="risk"]').forEach((i) => {
+    if (parseFloat(i.value) === S.adj) i.checked = true;
+    i.addEventListener('change', () => { S.adj = parseFloat(i.value); render(); });
+  });
+  $('given').addEventListener('change', (e) => { S.useGiven = e.target.checked; $('given-row').hidden = !S.useGiven; render(); });
+  $('given-n').value = S.given;
+  $('given-n').addEventListener('input', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) { S.given = v; render(); } });
+  $('inv').value = S.inv;
+  $('inv').addEventListener('input', (e) => { const v = parseFloat(e.target.value); S.inv = Number.isFinite(v) ? Math.abs(v) : 0; render(); });
+  S.cf.forEach((c, i) => {
+    const n = $('cf' + (i + 1)); n.value = c;
+    n.addEventListener('input', () => { const v = parseFloat(n.value); S.cf[i] = Number.isFinite(v) ? v : 0; render(); });
+  });
+  $('tv').addEventListener('change', (e) => { S.tv = e.target.checked; $('tv-row').hidden = !S.tv; render(); });
+
+  // ---------- steps ----------
+  const tabs = [...document.querySelectorAll('.tab')];
+  const links = [...document.querySelectorAll('.link')];
+  function go(i, focus) {
+    tabs.forEach((t, j) => {
+      const on = j === i - 1;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      $('p-' + (j + 1)).hidden = !on;
+      links[j].toggleAttribute('aria-current', on);
+      if (on) links[j].setAttribute('aria-current', 'step');
+    });
+    if (focus) tabs[i - 1].focus();
+  }
+  tabs.forEach((t, j) => {
+    t.addEventListener('click', () => go(j + 1));
+    t.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') go(((j + 1) % 4) + 1, true);
+      if (e.key === 'ArrowLeft') go(((j + 3) % 4) + 1, true);
+    });
+  });
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
+    go(+b.dataset.go);
+    if (b.classList.contains('btn')) document.querySelector('.tabs').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }));
+  $('copy').addEventListener('click', async () => {
+    const b = $('copy'), text = $('say').textContent;
+    try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; }
+    catch (err) {
+      const range = document.createRange(); range.selectNodeContents($('say'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); b.textContent = 'Selected';
+    }
+    setTimeout(() => (b.textContent = 'Copy'), 1600);
+  });
+
+  go(1);
+  render();
+})();
+</script>
+</body>
+</html>

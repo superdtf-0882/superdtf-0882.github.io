@@ -11,6 +11,7 @@ const staticPages = [
   '/sampleprototypes/',
   '/complexity-sovereignty-assessment/',
   '/blackseamonitor/',
+  '/prodmanfinance/',
 ];
 
 const nextConfig = {

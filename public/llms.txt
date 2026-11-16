@@ -10,7 +10,7 @@ readable text, except where marked CARRIED, which means the page itself
 delivers nothing to a reader without a browser and the substance is
 given here instead.
 
-WRITTEN BY HAND on 2026-09-12, last revised 2026-10-18. It is not
+WRITTEN BY HAND on 2026-09-12, last revised 2026-11-16. It is not
 generated from anything, so it can go stale. If a line here disagrees with the page it describes, the
 page is right.
 
@@ -27,13 +27,25 @@ page is right.
 
 /sampleprototypes/
   Index page describing the working prototypes. Serves its own text.
-  One is on this domain, the assessment below; the other is on a
-  separate subdomain:
+  Two are on this domain, the finance tool and the assessment below;
+  the third is on a separate subdomain:
 
   https://prototypes.davidfacer.com/dinotherapy
     Dinosaur Comics Therapy. A small interactive piece.
 
-## Prototype on this domain
+## Prototypes on this domain
+
+/prodmanfinance/
+  Finance for Product Managers. A tool for product managers to frame
+  projects and initiatives in ways that will make their CFO love them.
+  Serves its own text: four steps, from what shareholders expect (the
+  cost of equity) and the bar a project must clear (the weighted cost
+  of capital, adjusted for the project's risk), to the project's
+  value, its rate of return and its paybacks, then the levers that
+  move the answer most. Its figures are calculated in the browser from
+  the visitor's own inputs, so a reader that does not execute
+  JavaScript gets the explanations without the figures. Free to use;
+  it stores and sends nothing.
 
 /complexity-sovereignty-assessment/
   CARRIED — this page is a client-rendered application. It returns an
