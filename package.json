@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/work-item-gate.js && node scripts/code-gate.js && node scripts/code-gate-self-test.js && node scripts/prodmanfinance-self-test.js",
+    "prebuild": "node scripts/work-item-gate.js && node scripts/code-gate.js && node scripts/code-gate-self-test.js && node scripts/prodmanfinance-self-test.js && node scripts/packages-self-test.js",
     "build": "next build",
     "build:local": "next build",
     "start": "next start"
   },
   "dependencies": {
-    "next": "^15.1.0",
+    "next": "15.5.29",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -19,6 +19,9 @@
   },
   "devDependencies": {
     "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.20"
+    "eslint-config-next": "^15.5.29"
+  },
+  "overrides": {
+    "postcss": "^8.5.23"
   }
 }
