@@ -105,6 +105,37 @@ if (F) {
   say(cu && Array.isArray(cu.u) && cu.u.length === 6 && cu.u[5] === 160000, "the running total ends at 160,000 undiscounted");
 }
 
+// ---------------------------------------------------------------- the revenue ramp (draft)
+if (F) {
+  const sum = (a) => a.reduce((s, x) => s + x, 0);
+  // A straight ramp to 100 a month at month 12 loses 100 x 12 / 2 = 600 against full speed from
+  // launch, so 60 months bring 6,000 - 600 = 5,400. Month 1 is the area under the line from 0 to 1.
+  const r12 = call(() => F.rampRevenue(100, 12));
+  say(Array.isArray(r12) && r12.length === 60 && near(sum(r12), 5400, 1e-9), "a 12-month ramp to 100 a month brings 5,400 in five years", Array.isArray(r12) ? sum(r12) : r12);
+  say(Array.isArray(r12) && near(r12[0], 100 / 24, 1e-9) && near(r12[12], 100, 1e-9), "month 1 earns 100 / 24; month 13 earns the full 100");
+  // Onboarding: 10 starts a month, half finish, 25 to reach, 2-month wait, 4 a month each, 3 per start.
+  // Intake lasts 25 / 5 = 5 months; paying customers rise from month 2 to month 7, then hold at 25.
+  const ob = call(() => F.onboarding({ N: 10, d: 2, c: 50, A: 4, K: 3, P: 25 }));
+  say(ob && near(ob.fullAt, 7, 1e-9), "onboarding reaches full speed after the wait plus the intake: 2 + 25 / 5 = 7 months", ob && ob.fullAt);
+  say(ob && ob.revenue[0] === 0 && ob.revenue[1] === 0 && near(ob.revenue[2], 4 * 5 / 2, 1e-9), "nothing is paid during the wait; month 3 earns 4 x 5 / 2");
+  say(ob && near(sum(ob.cost), 3 * 10 * 5, 1e-9) && ob.cost[5] === 0, "every start costs once, 3 x 10 a month for 5 months, then nothing");
+  say(ob && near(ob.paying[59], 25, 1e-9) && near(sum(ob.revenue), 4 * 25 * (60 - 2 - 2.5), 1e-9), "25 paying at the end; revenue loses the wait plus half the intake", ob && sum(ob.revenue));
+  // Set up to match a ramp: the same five-year revenue, by the equal-loss rule.
+  const o18 = call(() => F.onboardingFromRamp(100, 18, 1, 80, 0));
+  say(o18 && near(sum(F.onboarding(o18).revenue), sum(F.rampRevenue(100, 18)), 1e-6), "onboarding set up from an 18-month ramp brings the same five-year revenue");
+  const back = call(() => F.rampFromOnboarding(o18));
+  say(back && near(back.R, 18, 1e-9) && near(back.M, 100, 1e-9), "and reads back as the same ramp and level");
+  // The change to each year's cash: 12 months sooner to the same level moves revenue into years 1 and 2,
+  // kept at 60%; onboarding cost is counted after 25% tax.
+  const dl = call(() => F.annualDelta(F.rampRevenue(100, 18), F.rampRevenue(100, 12), null, null, 60, 25));
+  say(Array.isArray(dl) && near(dl[0], 120, 1e-9) && near(dl[1], 60, 1e-9) && near(dl[2], 0, 1e-9), "18 months to 12 adds 120 to year 1 and 60 to year 2, kept at 60%", Array.isArray(dl) && dl.map((x) => x.toFixed(1)).join(" "));
+  const dc = call(() => F.annualDelta([0], [0], [100], [60], 60, 25));
+  say(Array.isArray(dc) && near(dc[0], 30, 1e-9), "40 less onboarding cost adds 30 after 25% tax");
+  // The same path never changes the cash: no double counting when nothing moved.
+  say(Array.isArray(dl) && sum(call(() => F.annualDelta(r12, r12, null, null, 60, 25))) === 0, "an unchanged path changes nothing");
+  say(near(call(() => F.solve((x) => x * x - 2, 0, 2)), Math.SQRT2, 1e-9) && call(() => F.solve((x) => x + 1, 0, 2)) === null, "solving finds a crossing, and says when there is none");
+}
+
 // ---------------------------------------------------------------- the page
 const page = read("public/prodmanfinance/index.html");
 say(!!page, "the page exists at /prodmanfinance/");
@@ -115,6 +146,9 @@ say(/class="eyebrow">Prototype · Will my project clear the bar\?</.test(page), 
 say(/<script src="\/prodmanfinance\/finance\.js"><\/script>/.test(page), "it loads its sums from the tested file");
 const scriptBody = (page.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || "";
 say(!/function irr\b|Math\.pow\(1 \+ r/.test(scriptBody), "and does no discounting of its own");
+say(/name="rv-mode" value="simple" checked/.test(page) && /name="rv-mode" value="onboarding"/.test(page), "step 4 offers two ways to model revenue, the simple ramp first");
+say(/How quickly sales build after launch/.test(page) && /Model customer onboarding/.test(page), "in the owner's words for each");
+say(!/lv-scale/.test(page), "the old yearly-cash lever is gone, so revenue moves through one path");
 const outside = (page.match(/(?:src|href)="https?:\/\/[^"]+"/g) || []).filter((u) => !/fonts\.googleapis\.com|fonts\.gstatic\.com|davidfacer\.com/.test(u));
 say(outside.length === 0, "it loads nothing from outside but Google Fonts", outside.join(" "));
 say(!/<script src="https?:/.test(page), "no outside script");
@@ -147,6 +181,9 @@ say(/\n\/prodmanfinance\/\n/.test(llms), "llms.txt lists /prodmanfinance/");
 say(!/One is on this domain/.test(llms) && /Two are on this domain/.test(llms), "llms.txt says two prototypes are on this domain");
 say(/the third is on a\s+separate subdomain/.test(llms), "and the third on the subdomain");
 say(/\n## Prototypes on this domain\n/.test(llms) && !/\n## Prototype on this domain\n/.test(llms), "its heading names prototypes, plural");
+// OKF-TOGAF#247 (1124-CC): the entry names the revenue ramp and the onboarding model.
+const llmsFlat = llms.replace(/\s+/g, " ");
+say(llmsFlat.includes("a simple ramp to the planned level") && llmsFlat.includes("a model of customer onboarding"), "llms.txt names the revenue ramp and the onboarding model");
 
 const sitemap = read("public/sitemap.xml");
 say(/<loc>https:\/\/davidfacer\.com\/prodmanfinance\/<\/loc>/.test(sitemap), "the sitemap lists it");
