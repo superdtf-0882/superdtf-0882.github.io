@@ -175,6 +175,25 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
 .back { margin-top: 40px; text-align: center; }
 .back a { color: var(--dim); font-size: 14px; text-decoration: none; }
 .back a:hover { color: var(--brass); }
+/* Step 4: revenue model */
+.seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 18px; }
+.seg-opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--hairline); border-radius: 12px; cursor: pointer; }
+.seg-opt:hover { border-color: rgba(184,146,74,0.4); }
+.seg-opt input { accent-color: var(--brass); margin-top: 4px; }
+.seg-opt .t { display: block; color: var(--paper); font-weight: 600; font-size: 14px; }
+.seg-opt .d { display: block; color: var(--dim); font-size: 12.5px; }
+.seg-opt:has(input:checked) { border-color: var(--brass); background: var(--brass-soft); }
+@media (max-width: 560px) { .seg { grid-template-columns: minmax(0, 1fr); } }
+.mode-note { margin: -6px 0 18px; padding: 10px 14px; border-left: 2px solid var(--brass); color: var(--smoke); font-size: 13.5px; }
+details.more summary { cursor: pointer; color: var(--brass); font-size: 13.5px; font-weight: 500; }
+details.more[open] summary { margin-bottom: 8px; }
+details.more .field-top { margin-top: 10px; }
+.pays { display: grid; gap: 8px; margin-top: 10px; }
+.pay { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 10px; }
+.pay .t { color: var(--paper); font-size: 13.5px; font-weight: 500; }
+.pay .r { font: 13px var(--mono); color: var(--brass); white-space: nowrap; text-align: right; }
+.pay .d { grid-column: 1 / -1; font-size: 12.5px; color: var(--dim); }
+.pay.no .r { color: var(--dim); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -359,20 +378,82 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
   <section class="panel" role="tabpanel" id="p-4" aria-labelledby="tab-4" hidden>
     <div class="panel-head">
       <h2>What moves the answer</h2>
-      <p>Each lever is something a product manager can change. Pull them below and watch the project's value move from today's <b id="base-npv">—</b>. The chart under them shows which lever matters most for this project.</p>
+      <p>Product decisions change the cash, and the cash decides whether the project creates value. Pull the levers below and watch the value move from today's <b id="base-npv">—</b>. For a recurring-revenue product, how quickly paying customers arrive after launch is often the lever that matters most.</p>
     </div>
+
+    <div class="seg" role="radiogroup" aria-label="How to model revenue after launch">
+      <label class="seg-opt"><input type="radio" name="rv-mode" value="simple" checked><span><span class="t">Simple ramp</span><span class="d">How quickly sales build after launch</span></span></label>
+      <label class="seg-opt"><input type="radio" name="rv-mode" value="onboarding"><span><span class="t">Model customer onboarding</span><span class="d">The assumptions behind the ramp</span></span></label>
+    </div>
+    <p class="mode-note" id="mode-note" hidden></p>
+
     <div class="cols">
       <div>
         <div class="field">
-          <div class="field-top"><label for="lv-shift">When the cash arrives</label><span class="lv-val" id="lv-shift-v">On plan</span></div>
+          <div class="field-top"><label for="lv-shift">When you launch</label><span class="lv-val" id="lv-shift-v">On plan</span></div>
           <input id="lv-shift" type="range" min="-12" max="12" step="1" value="0">
-          <p class="help">Slide left to ship sooner, right for a slip. Moves every year's cash, and the value after year 5 if counted.</p>
+          <p class="help">When the opportunity begins. Slide left to launch sooner, right for a slip. Moves everything after launch, the same amount.</p>
         </div>
-        <div class="field">
-          <div class="field-top"><label for="lv-scale">Yearly cash</label><span class="lv-val" id="lv-scale-v">As planned</span></div>
-          <input id="lv-scale" type="range" min="-50" max="50" step="5" value="0">
-          <p class="help">Adoption, pricing and retention all land here.</p>
+
+        <div id="rv-simple">
+          <div class="field">
+            <div class="field-top"><label for="rv-r-n">How quickly sales build after launch</label><span class="num"><input id="rv-r-n" type="number" min="1" max="48" step="1"><span>months</span></span></div>
+            <input id="rv-r" type="range" min="1" max="48" step="1" aria-label="Months to reach planned revenue">
+            <p class="help">Months from launch until recurring revenue reaches the planned level. Your plan assumes <b id="rv-r0-v">—</b>. Faster onboarding, activation or sales capacity shortens it.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="rv-lvl">Planned revenue at full speed</label><span class="lv-val" id="rv-lvl-v">As planned</span></div>
+            <input id="rv-lvl" type="range" min="-50" max="50" step="5" value="0">
+            <p class="help">A change in demand or price: more or fewer customers, or more or less from each. The ramp's speed stays as set above.</p>
+          </div>
+          <details class="field more">
+            <summary>Your plan, month by month</summary>
+            <p class="help">Step 3's cash is yearly. To move revenue by the month, the page reads your plan as recurring revenue that rises in a straight line from launch to a planned level, then holds.</p>
+            <div class="field-top"><label for="rv-m">Recurring revenue at full speed, per month</label><span class="num"><span>$</span><input id="rv-m" type="number" min="0" step="500"></span></div>
+            <div class="field-top"><label for="rv-keep">Of each revenue dollar, the project keeps</label><span class="num"><input id="rv-keep" type="number" min="1" max="100" step="1"><span>%</span></span></div>
+            <p class="help">After the costs that grow with sales, and after tax.</p>
+            <div class="field-top"><label for="rv-r0">Months your plan takes to reach full speed</label><span class="num"><input id="rv-r0" type="number" min="1" max="48" step="1"><span>months</span></span></div>
+            <p class="help" id="rv-check"></p>
+          </details>
         </div>
+
+        <div id="rv-onb" hidden>
+          <div class="field">
+            <div class="field-top"><label for="ob-n-n">Customers who start onboarding each month</label><span class="num"><input id="ob-n-n" type="number" min="0.5" step="0.5"></span></div>
+            <input id="ob-n" type="range" min="0.5" max="60" step="0.5" aria-label="Customers who start onboarding each month">
+            <p class="help">Demand: how many new customers sales brings in a month. This is a change in demand, not in onboarding.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="ob-d-n">Months from starting to first payment</label><span class="num"><input id="ob-d-n" type="number" min="0" max="12" step="0.5"><span>months</span></span></div>
+            <input id="ob-d" type="range" min="0" max="12" step="0.5" aria-label="Months from starting to first payment">
+            <p class="help">Setup, integration, training, sign-off. Billing that starts at signup makes it zero.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="ob-c-n">Share who finish onboarding and pay</label><span class="num"><input id="ob-c-n" type="number" min="5" max="100" step="1"><span>%</span></span></div>
+            <input id="ob-c" type="range" min="5" max="100" step="1" aria-label="Share who finish onboarding and pay">
+            <p class="help">The rest stall or leave before paying. They still cost onboarding.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="ob-a-n">Revenue per paying customer, per month</label><span class="num"><span>$</span><input id="ob-a-n" type="number" min="1" step="10"></span></div>
+            <input id="ob-a" type="range" min="10" max="5000" step="10" aria-label="Revenue per paying customer, per month">
+            <p class="help">Price and packaging. A change here changes the planned revenue level.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="ob-k-n">Onboarding cost per customer who starts</label><span class="num"><span>$</span><input id="ob-k-n" type="number" min="0" step="10"></span></div>
+            <input id="ob-k" type="range" min="0" max="5000" step="10" aria-label="Onboarding cost per customer who starts">
+            <p class="help">People's time and tools, spent once per customer, whether or not they finish.</p>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="ob-x">Up-front cost of an onboarding change</label><span class="num"><span>$</span><input id="ob-x" type="number" min="0" step="5000"></span></div>
+            <p class="help">For example, automating setup. Added to the upfront spend, so you can weigh it against what it improves.</p>
+          </div>
+          <details class="field more">
+            <summary>Customers at full speed</summary>
+            <div class="field-top"><label for="ob-p">Paying customers the plan reaches at full speed</label><span class="num"><input id="ob-p" type="number" min="1" step="1"></span></div>
+            <p class="help">Intake stops once this many are paying. A change here is a change in the size of the opportunity. The model has no customers leaving.</p>
+          </details>
+        </div>
+
         <div class="field">
           <div class="field-top"><label for="lv-inv">Upfront spend</label><span class="lv-val" id="lv-inv-v">As planned</span></div>
           <input id="lv-inv" type="range" min="-50" max="50" step="5" value="0">
@@ -390,10 +471,21 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
           <div class="big" id="s-npv">—</div>
           <span class="verdict" id="s-verdict">—</span>
           <div class="metrics">
-            <div class="metric"><div class="k">Change</div><div class="v" id="s-delta">—</div><div class="s">against today</div></div>
+            <div class="metric"><div class="k">Change</div><div class="v" id="s-delta">—</div><div class="s" id="s-delta-s">against today</div></div>
             <div class="metric"><div class="k">Yearly return</div><div class="v" id="s-irr">—</div><div class="s">against a <span id="s-h">—</span> bar</div></div>
             <div class="metric"><div class="k">Payback</div><div class="v" id="s-pb">—</div><div class="s">cash back</div></div>
           </div>
+        </div>
+        <div class="result">
+          <h3>Recurring revenue, month by month</h3>
+          <svg class="chart" id="ramp" viewBox="0 0 440 220" role="img" aria-label="Recurring revenue by month, plan and your scenario"></svg>
+          <div class="legend"><span><i style="border-color:var(--smoke);border-top-style:dashed"></i><span id="ramp-base-l">Plan</span></span><span><i style="border-color:var(--brass)"></i>Your scenario</span></div>
+          <p class="help" id="ramp-note" style="margin-top:6px"></p>
+        </div>
+        <div class="result" id="justify" hidden>
+          <h3>What would pay for the change</h3>
+          <p class="help" id="justify-lead"></p>
+          <div class="pays" id="pays"></div>
         </div>
         <div class="say">
           <div class="row"><h3 style="margin:0">Say it to your CFO</h3><button class="btn ghost" id="copy2" type="button">Copy</button></div>
@@ -403,13 +495,13 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
       </div>
     </div>
     <div class="result" style="margin-top:22px">
-      <h3>Which lever matters most</h3>
+      <h3 id="tornado-title">Which lever matters most</h3>
       <svg class="chart" id="tornado" viewBox="0 0 680 250" role="img" aria-label="How far each lever moves the project's value"></svg>
-      <div class="legend"><span><i style="border-color:var(--short);border-top-width:8px"></i>Downside</span><span><i style="border-color:var(--clear);border-top-width:8px"></i>Upside</span><span><i style="border-color:var(--brass)"></i>Today's value</span><span><i style="border-color:var(--paper);border-top-style:dashed"></i>Your scenario</span></div>
-      <p class="help" style="margin-top:8px">Each bar runs from the lever's downside case to its upside case, holding the others at plan.</p>
+      <div class="legend"><span><i style="border-color:var(--short);border-top-width:8px"></i>Downside</span><span><i style="border-color:var(--clear);border-top-width:8px"></i>Upside</span><span><i style="border-color:var(--brass)"></i><span id="tornado-base-l">Today's value</span></span><span><i style="border-color:var(--paper);border-top-style:dashed"></i>Your scenario</span></div>
+      <p class="help" style="margin-top:8px" id="tornado-help">Each bar runs from the lever's downside case to its upside case, holding the others at plan.</p>
     </div>
     <div class="levers" id="levers"></div>
-    <p class="fine">A teaching tool, not a valuation. Real business cases model cash by quarter, include working capital and the costs the project shares with others, and are reviewed with finance. The numbers start as an example and stay in this page only.</p>
+    <p class="fine">A teaching tool, not a valuation. Revenue and onboarding costs are worked out by the month, then summed into each year and counted at the year's end, as step 3's cash is. Real business cases model cash by quarter, include working capital, customers who leave, and the costs the project shares with others, and are reviewed with finance. The numbers start as an example and stay in this page only.</p>
   </section>
 
   <p class="back"><a href="https://davidfacer.com/sampleprototypes/">← Prototypes</a></p>
@@ -494,29 +586,131 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
     }
   }
 
+  // ---------- step 4: the levers and the revenue model ----------
+  // Every revenue-side change runs through one path: the monthly model in finance.js gives the
+  // change to each year's cash, which is added to step 3's plan. Nothing is also scaled elsewhere.
+  const LV = { shift: 0, inv: 0, bump: 0 };
+  const RV = {
+    mode: 'simple',
+    keep: 60, mSet: null, r0: 18,       // the plan, read month by month (mSet null: from year 5)
+    R: 18, lvl: 0,                       // the simple scenario
+    onb: null, onb0: null, carry: [0, 0, 0, 0, 0], extra: 0, // onboarding: now, as set up, and the change carried in
+    saved: null,                         // the onboarding scenario, kept while the simple ramp is shown
+    note: '',
+  };
+  const mPlan = () => (RV.mSet !== null ? RV.mSet : Math.max(0, S.cf[4]) / (12 * RV.keep / 100));
+  const nice = (x) => { if (!(x > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x))); return [1, 2, 2.5, 5, 10].map((m) => m * p).reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a)); };
+  const round1 = (x) => Math.round(x * 10) / 10;
+
+  // The project as a scenario: the plan's cash plus the revenue model's change to each year,
+  // the spend, launch and risk levers applied. `o` overrides any setting, for the chart of levers.
+  function scenario(o = {}) {
+    const lv = { ...LV, ...(o.lv || {}) };
+    const mode = o.mode || RV.mode;
+    let delta, rev, paying = null, fullAt, extra = 0, cost = null;
+    if (mode === 'simple') {
+      const R = o.R ?? RV.R, lvl = o.lvl ?? RV.lvl;
+      const base = F.rampRevenue(mPlan(), RV.r0);
+      rev = F.rampRevenue(mPlan() * (1 + lvl / 100), R);
+      delta = F.annualDelta(base, rev, null, null, RV.keep, S.tax);
+      fullAt = R;
+    } else {
+      const b = F.onboarding(RV.onb0), s = F.onboarding({ ...RV.onb, ...(o.onb || {}) });
+      delta = F.annualDelta(b.revenue, s.revenue, b.cost, s.cost, RV.keep, S.tax).map((x, i) => x + RV.carry[i]);
+      rev = s.revenue; paying = s.paying; fullAt = s.fullAt; cost = s.cost;
+      extra = o.extra ?? RV.extra;
+    }
+    const P = { ...S, cf: S.cf.map((c, i) => c + delta[i]), inv: S.inv * (1 + lv.inv / 100) + extra };
+    const h = hurdle(lv.bump), shift = lv.shift / 12;
+    const f = F.flows(P, h, { shift });
+    const n = f ? F.pv(f, h) : NaN;
+    return { P, f, n, h, shift, rev, paying, fullAt, cost, delta };
+  }
+  const value = (o) => scenario(o).n;
+
+  // Onboarding, set up to reproduce the simple ramp as it now stands.
+  function setUpOnboarding() {
+    const M = mPlan() * (1 + RV.lvl / 100), A = nice(M / 100);
+    RV.onb0 = F.onboardingFromRamp(M, RV.R, A, 80, nice(A * 1.5));
+    RV.onb = { ...RV.onb0 };
+    RV.carry = F.annualDelta(F.rampRevenue(mPlan(), RV.r0), F.rampRevenue(M, RV.R), null, null, RV.keep, S.tax);
+    RV.extra = 0;
+    // How closely it reproduces the ramp, in value: its revenue path against the ramp's.
+    const approx = F.annualDelta(F.rampRevenue(M, RV.R), F.onboarding(RV.onb0).revenue, null, null, RV.keep, S.tax);
+    const h = hurdle();
+    const gap = F.pv(approx.map((v, i) => ({ t: i + 1, v })), h);
+    RV.note = `Set up to match your simple ramp: ${round1(RV.onb0.N)} customers a month start onboarding, the first payment comes ${RV.onb0.d} months after they start, ${RV.onb0.c}% finish and pay ${money(RV.onb0.A)} a month, and each start costs ${money(RV.onb0.K)}. ${Math.abs(gap) < 1000 ? 'These assumptions reproduce the ramp\'s value almost exactly' : 'These assumptions reproduce the ramp to within ' + money(Math.abs(gap)) + ' of value'}; the curves differ a little because customers pay nothing until their first-payment wait ends. The page measures your changes from here, so switching itself doesn't move the value.`;
+  }
+
+  function setMode(mode) {
+    if (mode === RV.mode) return;
+    if (mode === 'onboarding') {
+      const s = RV.saved;
+      if (s && s.R === RV.R && s.lvl === RV.lvl && s.mPlan === mPlan() && s.r0 === RV.r0 && s.keep === RV.keep) {
+        Object.assign(RV, { onb: s.onb, onb0: s.onb0, carry: s.carry, extra: s.extra });
+        RV.note = 'Your onboarding scenario is as you left it.';
+      } else setUpOnboarding();
+    } else {
+      // Back to the simple ramp: the ramp and level the onboarding scenario amounts to.
+      const eq = F.rampFromOnboarding(RV.onb);
+      RV.R = Math.max(1, Math.min(48, Math.round(eq.R)));
+      RV.lvl = Math.round((eq.M / mPlan() - 1) * 100);
+      const lost = [];
+      if (RV.onb.K !== RV.onb0.K) lost.push('the onboarding cost');
+      if (RV.extra) lost.push('the up-front cost of the change');
+      RV.saved = { onb: RV.onb, onb0: RV.onb0, carry: RV.carry, extra: RV.extra, R: RV.R, lvl: RV.lvl, mPlan: mPlan(), r0: RV.r0, keep: RV.keep };
+      RV.note = `The simple ramp shows what your onboarding scenario amounts to: full speed after ${RV.R} months, revenue ${RV.lvl === 0 ? 'as planned' : (RV.lvl > 0 ? '+' : '−') + Math.abs(RV.lvl) + '%'}.` +
+        (lost.length ? ` A simple ramp can't show ${lost.join(' or ')}; switch back to see ${lost.length > 1 ? 'them' : 'it'}, kept as you left ${lost.length > 1 ? 'them' : 'it'}.` : '');
+    }
+    RV.mode = mode;
+    syncInputs();
+  }
+
+  // The levers each moved alone, for the chart: around the plan, or around onboarding as set up.
   function levers() {
-    const base = npv();
-    const L = [
-      { name: 'Timing', down: npv({ shift: 0.5 }), up: npv({ shift: -0.5 }), dl: '6 months later', ul: '6 months sooner',
-        d: 'Ship a smaller first release sooner, so cash starts earlier. Every month of delay costs money even if the totals don’t change.' },
-      { name: 'Adoption', down: npv({ scale: 0.8 }), up: npv({ scale: 1.2 }), dl: '20% less cash a year', ul: '20% more cash a year',
-        d: 'Pick a sharper first segment, price for value, and plan the launch with marketing early. This moves every year’s cash at once.' },
-      { name: 'Upfront cost', down: npv({ inv: 1.2 }), up: npv({ inv: 0.8 }), dl: '20% more spend', ul: '20% less spend',
-        d: 'Phase the investment: build only what proves demand, then fund the rest. Money not spent yet is money not at risk.' },
-      { name: 'Risk', down: npv({ bump: 2 }), up: npv({ bump: -2 }), dl: 'bar 2 points higher', ul: 'bar 2 points lower',
-        d: 'Run a pilot or sign a design partner before full funding. Evidence of demand is what lets finance judge the project as less risky.' },
-    ].map((l) => ({ ...l, swing: Math.abs(l.up - l.down) }))
-     .filter((l) => Number.isFinite(l.swing))
-     .sort((a, b) => b.swing - a.swing);
+    const base = RV.mode === 'simple' ? npv() : value({ onb: RV.onb0, extra: 0, lv: { shift: 0, inv: 0, bump: 0 } });
+    const at0 = { lv: { shift: 0, inv: 0, bump: 0 } };
+    let L;
+    if (RV.mode === 'simple') {
+      const o = { ...at0, R: RV.r0, lvl: 0 };
+      L = [
+        { name: 'Launch', down: value({ ...o, lv: { shift: 6, inv: 0, bump: 0 } }), up: value({ ...o, lv: { shift: -6, inv: 0, bump: 0 } }), dl: '6 months later', ul: '6 months sooner',
+          d: 'Launch a smaller first release sooner, so the opportunity starts earlier.' },
+        { name: 'Ramp speed', down: value({ ...o, R: RV.r0 + 6 }), up: value({ ...o, R: Math.max(1, RV.r0 - 6) }), dl: 'full speed 6 months later', ul: '6 months sooner',
+          d: 'How quickly customers start paying after launch: onboarding, activation and sales capacity. Model customer onboarding to see which part of it matters.' },
+        { name: 'Revenue at full speed', down: value({ ...o, lvl: -20 }), up: value({ ...o, lvl: 20 }), dl: '20% less', ul: '20% more',
+          d: 'Demand and price: a sharper first segment, pricing for value, packaging that sells more to each customer.' },
+        { name: 'Upfront cost', down: value({ ...o, lv: { shift: 0, inv: 20, bump: 0 } }), up: value({ ...o, lv: { shift: 0, inv: -20, bump: 0 } }), dl: '20% more spend', ul: '20% less spend',
+          d: 'Phase the investment: build only what proves demand, then fund the rest.' },
+        { name: 'Risk', down: value({ ...o, lv: { shift: 0, inv: 0, bump: 2 } }), up: value({ ...o, lv: { shift: 0, inv: 0, bump: -2 } }), dl: 'bar 2 points higher', ul: 'bar 2 points lower',
+          d: 'Evidence of demand, such as a pilot or a design partner, lets finance judge the project as less risky.' },
+      ];
+    } else {
+      const b = RV.onb0, o = { ...at0, extra: 0 };
+      const at = (ch) => value({ ...o, onb: { ...b, ...ch } });
+      L = [
+        { name: 'Demand: starts a month', down: at({ N: b.N * 0.8 }), up: at({ N: b.N * 1.2 }), dl: '20% fewer a month', ul: '20% more',
+          d: 'Demand, not onboarding: marketing reach and sales capacity.' },
+        { name: 'Wait to first payment', down: at({ d: b.d + 1 }), up: at({ d: Math.max(0, b.d - 1) }), dl: 'a month longer', ul: 'a month shorter',
+          d: 'Faster setup, self-serve activation, or billing that starts at signup.' },
+        { name: 'Customers who finish', down: at({ c: Math.max(5, b.c - 10) }), up: at({ c: Math.min(100, b.c + 10) }), dl: '10 points fewer', ul: '10 points more',
+          d: 'Fewer customers stalling: guided setup, success outreach in the first weeks.' },
+        { name: 'Price per customer', down: at({ A: b.A * 0.9 }), up: at({ A: b.A * 1.1 }), dl: '10% less', ul: '10% more',
+          d: 'Price, not onboarding: it changes the revenue level, not how fast customers arrive.' },
+        { name: 'Onboarding cost', down: at({ K: b.K * 1.3 }), up: at({ K: b.K * 0.7 }), dl: '30% more a start', ul: '30% less',
+          d: 'Automate the steps people do by hand.' },
+      ];
+    }
+    L = L.map((l) => ({ ...l, swing: Math.abs(l.up - l.down) })).filter((l) => Number.isFinite(l.swing)).sort((a, b) => b.swing - a.swing);
     return { base, L };
   }
 
   function drawTornado(base, L) {
     const svg = $('tornado'); svg.replaceChildren();
-    const W = 680, rowH = 50, T = 22, B = 28, left = 128, right = 20;
+    const W = 680, rowH = 46, T = 22, B = 28, left = 150, right = 20;
     const H = T + rowH * L.length + B + 16;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    const scv = npv(lvOpts());
+    const scv = scenario().n;
     const vals = L.flatMap((l) => [l.up, l.down]).concat([base, 0], Number.isFinite(scv) ? [scv] : []);
     let lo = Math.min(...vals), hi = Math.max(...vals);
     const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
@@ -529,10 +723,10 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
     });
     L.forEach((l, i) => {
       const cy = T + i * rowH + rowH / 2;
-      svg.append(el('text', { x: 0, y: cy + 4, fill: '#ECEEF1', 'font-size': 12.5 }, l.name));
+      svg.append(el('text', { x: 0, y: cy + 4, fill: '#ECEEF1', 'font-size': 12 }, l.name));
       const bar = (v, color) => {
         const a = Math.min(x(v), x(base)), w = Math.max(1.5, Math.abs(x(v) - x(base)));
-        svg.append(el('rect', { x: a, y: cy - 11, width: w, height: 22, rx: 3, fill: color, 'fill-opacity': 0.85 }));
+        svg.append(el('rect', { x: a, y: cy - 10, width: w, height: 20, rx: 3, fill: color, 'fill-opacity': 0.85 }));
       };
       bar(l.down, '#D3826C'); bar(l.up, '#82B894');
       const dl = x(l.down) < x(base) ? { x: x(l.down) - 6, a: 'end' } : { x: x(l.down) + 6, a: 'start' };
@@ -541,61 +735,212 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
       svg.append(el('text', { x: ul.x, y: cy + 4, 'text-anchor': ul.a }, money(l.up)));
     });
     svg.append(el('line', { x1: x(base), x2: x(base), y1: T - 10, y2: H - B, stroke: '#B8924A', 'stroke-width': 2 }));
-    svg.append(el('text', { x: x(base), y: T - 12, 'text-anchor': 'middle', fill: '#B8924A' }, 'today ' + money(base)));
-    const sc = npv(lvOpts());
-    if (Number.isFinite(sc) && Math.abs(sc - base) > 0.5) {
-      const sx = Math.max(left, Math.min(W - right, x(sc)));
+    svg.append(el('text', { x: x(base), y: T - 12, 'text-anchor': 'middle', fill: '#B8924A' }, (RV.mode === 'simple' ? 'today ' : 'as set up ') + money(base)));
+    if (Number.isFinite(scv) && Math.abs(scv - base) > 0.5) {
+      const sx = Math.max(left, Math.min(W - right, x(scv)));
       svg.append(el('line', { x1: sx, x2: sx, y1: T - 4, y2: H - B - 16, stroke: '#ECEEF1', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }));
-      svg.append(el('text', { x: sx, y: H - B - 2, 'text-anchor': sx > W * 0.7 ? 'end' : sx < left + 60 ? 'start' : 'middle', fill: '#ECEEF1' }, 'yours ' + money(sc)));
+      svg.append(el('text', { x: sx, y: H - B - 2, 'text-anchor': sx > W * 0.7 ? 'end' : sx < left + 60 ? 'start' : 'middle', fill: '#ECEEF1' }, 'yours ' + money(scv)));
     }
   }
 
-  // ---------- your scenario ----------
-  const LV = { shift: 0, scale: 0, inv: 0, bump: 0 };
-  const lvOpts = () => ({ shift: LV.shift / 12, scale: 1 + LV.scale / 100, inv: 1 + LV.inv / 100, bump: LV.bump });
-  const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '');
+  // Monthly recurring revenue: the reference path dashed, the scenario solid, both from today.
+  function drawRamp(sc) {
+    const svg = $('ramp'); svg.replaceChildren();
+    const W = 440, H = 220, L = 58, R = 14, T = 14, B = 28, N = 60;
+    const shiftM = LV.shift;
+    const ref = RV.mode === 'simple' ? F.rampRevenue(mPlan(), RV.r0) : F.onboarding(RV.onb0).revenue;
+    const at = (arr, m) => (m >= 1 && m <= arr.length ? arr[m - 1] : m < 1 ? 0 : arr[arr.length - 1]);
+    const all = ref.concat(sc.rev, [0]);
+    const hi = Math.max(...all) * 1.08 || 1;
+    const ticks = niceTicks(0, hi, 4);
+    const top = Math.max(hi, ticks[ticks.length - 1]);
+    const x = (m) => L + (m / N) * (W - L - R);
+    const y = (v) => T + (1 - v / top) * (H - T - B);
+    ticks.forEach((v) => {
+      svg.append(el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? '#3A4150' : '#1E222A' }));
+      svg.append(el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, money(v)));
+    });
+    for (let yr = 0; yr <= 5; yr++) svg.append(el('text', { x: x(yr * 12), y: H - 8, 'text-anchor': 'middle' }, yr === 0 ? 'Launch' : 'Yr ' + yr));
+    const path = (fn) => { let d = ''; for (let m = 0; m <= N; m++) d += (m ? 'L' : 'M') + x(m).toFixed(1) + ',' + y(fn(m)).toFixed(1); return d; };
+    svg.append(el('path', { d: path((m) => at(ref, m)), fill: 'none', stroke: '#C9CDD3', 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }));
+    svg.append(el('path', { d: path((m) => at(sc.rev, m - shiftM)), fill: 'none', stroke: '#B8924A', 'stroke-width': 2.2 }));
+    const fx = sc.fullAt + shiftM;
+    if (Number.isFinite(fx) && fx >= 0 && fx <= N) {
+      svg.append(el('line', { x1: x(fx), x2: x(fx), y1: T, y2: H - B, stroke: '#B8924A', 'stroke-opacity': 0.5, 'stroke-dasharray': '2 3' }));
+      svg.append(el('text', { x: Math.min(x(fx) + 4, W - R - 60), y: T + 10, fill: '#B8924A' }, 'full speed'));
+    }
+    if (shiftM) svg.append(el('text', { x: x(Math.max(0, shiftM)) + 4, y: y(0) - 6, fill: '#ECEEF1' }, shiftM > 0 ? 'launch ' + shiftM + ' mo later' : 'launch ' + -shiftM + ' mo sooner'));
+  }
+
+  // What the onboarding change would need to deliver, each assumption on its own, to cover its cost.
+  function payFor() {
+    const b = RV.onb0, X = RV.extra;
+    const lv0 = { shift: LV.shift, inv: LV.inv, bump: LV.bump };
+    const before = value({ onb: b, extra: 0, lv: lv0 });
+    const gap = (ch) => value({ onb: { ...b, ...ch }, extra: X, lv: lv0 }) - before;
+    const rows = [];
+    const most = (ch) => gap(ch) + X; // what the improvement is worth at its limit
+    const dSol = F.solve((v) => gap({ d: v }), 0, b.d);
+    rows.push({ t: 'First payment sooner', ok: dSol !== null, r: dSol !== null ? `${round1(b.d - dSol)} months sooner` : `worth ${money(most({ d: 0 }))} at most`, d: dSol !== null ? `From ${mo(b.d)} after starting.` : `Even billing from the first day, from ${mo(b.d)} now.`, s: dSol !== null ? `the first payment coming ${mo(b.d - dSol)} sooner` : '' });
+    const cSol = F.solve((v) => gap({ c: v }), b.c, 100);
+    rows.push({ t: 'More customers finish', ok: cSol !== null, r: cSol !== null ? `+${round1(cSol - b.c)} points` : `worth ${money(most({ c: 100 }))} at most`, d: cSol !== null ? `From ${b.c}% of starters.` : `Even with every starter finishing, from ${b.c}% now.`, s: cSol !== null ? `${round1(cSol - b.c)} more points of starters finishing` : '' });
+    const kSol = b.K > 0 ? F.solve((v) => gap({ K: v }), 0, b.K) : null;
+    rows.push({ t: 'Onboarding costs less', ok: kSol !== null, r: kSol !== null ? `${Math.round((1 - kSol / b.K) * 100)}% less a start` : `worth ${money(most({ K: 0 }))} at most`, d: kSol !== null ? `From ${money(b.K)} a start.` : `Even at no cost, from ${money(b.K)} a start now.`, s: kSol !== null ? `onboarding costing ${Math.round((1 - kSol / b.K) * 100)}% less a start` : '' });
+    return { before, rows };
+  }
+
   function lvLabels() {
     $('lv-shift-v').textContent = LV.shift === 0 ? 'On plan' : Math.abs(LV.shift) + (Math.abs(LV.shift) === 1 ? ' month ' : ' months ') + (LV.shift < 0 ? 'sooner' : 'later');
-    $('lv-scale-v').textContent = LV.scale === 0 ? 'As planned' : sgn(LV.scale) + Math.abs(LV.scale) + '% a year';
     $('lv-inv-v').textContent = LV.inv === 0 ? 'As planned' : sgn(LV.inv) + Math.abs(LV.inv) + '%';
-    $('lv-bump-v').textContent = LV.bump === 0 ? 'As set in step 2' : (LV.bump < 0 ? 'Bar ' : 'Bar ') + sgn(LV.bump) + Math.abs(LV.bump) + ' pts';
+    $('lv-bump-v').textContent = LV.bump === 0 ? 'As set in step 2' : 'Bar ' + sgn(LV.bump) + Math.abs(LV.bump) + ' pts';
+    $('rv-lvl-v').textContent = RV.lvl === 0 ? 'As planned' : sgn(RV.lvl) + Math.abs(RV.lvl) + '%';
   }
-  function renderScenario(base) {
+  const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '');
+  const mo = (n) => `${round1(n)} ${round1(n) === 1 ? 'month' : 'months'}`;
+
+  // The sentence: what changed, why it changed, and the value that results.
+  function sentence(sc, base) {
+    const f = sc.f;
+    if (!f) return 'Set growth after year 5 below the hurdle rate to see the summary.';
+    const tol = Math.max(1, S.inv * 0.005);
+    const moves = [];
+    if (LV.shift) moves.push(LV.shift < 0 ? `launch ${Math.abs(LV.shift)} months sooner` : `launch ${LV.shift} months later`);
+    let why = '', from = base, fromWord = '';
+    if (RV.mode === 'simple') {
+      if (RV.R !== RV.r0) moves.push(`reach full speed ${mo(RV.R)} after launch instead of ${mo(RV.r0)}`);
+      if (RV.lvl) moves.push(`plan on ${Math.abs(RV.lvl)}% ${RV.lvl > 0 ? 'more' : 'less'} revenue at full speed`);
+      if (RV.R !== RV.r0) why = `, because recurring revenue reaches ${money(mPlan() * (1 + RV.lvl / 100))} a month ${RV.R < RV.r0 ? mo(RV.r0 - RV.R) + ' sooner' : mo(RV.R - RV.r0) + ' later'}`;
+    } else {
+      const b = RV.onb0, o = RV.onb;
+      if (o.N !== b.N) moves.push(`bring ${round1(o.N)} customers a month into onboarding instead of ${round1(b.N)}`);
+      if (o.d !== b.d) moves.push(`make the first payment come ${mo(o.d)} after starting instead of ${mo(b.d)}`);
+      if (o.c !== b.c) moves.push(`have ${o.c}% of starters finish and pay instead of ${b.c}%`);
+      if (o.A !== b.A) moves.push(`charge ${money(o.A)} a month per customer instead of ${money(b.A)}`);
+      if (o.K !== b.K) moves.push(`bring onboarding to ${money(o.K)} a start from ${money(b.K)}`);
+      if (o.P !== b.P) moves.push(`aim for ${Math.round(o.P)} paying customers instead of ${Math.round(b.P)}`);
+      if (RV.extra) moves.push(`spend ${money(RV.extra)} up front to do it`);
+      from = value({ onb: b, extra: 0 }); fromWord = ' before the change';
+      const s0 = F.onboarding(b), s1 = F.onboarding(o);
+      if (Math.abs(s1.fullAt - s0.fullAt) > 0.05 || o.P !== b.P)
+        why = `, because paying customers reach ${Math.round(o.P)} after ${mo(s1.fullAt)} instead of ${mo(s0.fullAt)}`;
+      else if (o.K !== b.K) why = ', because each customer costs less to bring on';
+    }
+    if (LV.inv) moves.push(`${LV.inv < 0 ? 'cut' : 'add'} ${Math.abs(LV.inv)}% ${LV.inv < 0 ? 'from' : 'to'} the upfront spend`);
+    if (LV.bump) moves.push(LV.bump < 0 ? `show enough evidence to lower the bar ${Math.abs(LV.bump)} points` : `face a bar ${LV.bump} points higher`);
+    const n = sc.n;
+    if (!moves.length) return `Pull a lever to see what it does. Today the project ${base >= 0 ? 'creates' : 'falls short by'} ${money(Math.abs(base))} of value at our ${pct(hurdle())} hurdle rate.`;
+    const list = moves.length > 1 ? moves.slice(0, -1).join(', ') + ' and ' + moves[moves.length - 1] : moves[0];
+    let s = `If we ${list}, the project's value goes from ${money(from)}${fromWord} to ${money(n)}${why}`;
+    s += n > tol && from <= tol ? ', and it clears the bar' : n < -tol && from >= -tol ? ', and it no longer clears the bar' : '';
+    s += '.';
+    if (RV.mode === 'onboarding' && RV.extra) {
+      const net = n - from;
+      if (net >= 0) s += ` The change more than pays for its ${money(RV.extra)}.`;
+      else {
+        const pf = payFor().rows.find((r) => r.ok);
+        s += ` That doesn't yet cover its ${money(RV.extra)}` + (pf ? `; on its own, ${pf.s} would.` : `, and no single improvement would on its own.`);
+      }
+    }
+    return s;
+  }
+
+  function renderScenario(todayBase) {
     lvLabels();
-    const o = lvOpts(), h = hurdle(o.bump), f = flows(h, o);
-    const n = f ? pv(f, h) : NaN, r = f ? irr(f) : null;
-    const tol = Math.max(1, S.inv * o.inv * 0.005);
+    $('rv-simple').hidden = RV.mode !== 'simple';
+    $('rv-onb').hidden = RV.mode !== 'onboarding';
+    $('justify').hidden = RV.mode !== 'onboarding';
+    $('mode-note').hidden = !RV.note; $('mode-note').textContent = RV.note;
+    $('rv-r0-v').textContent = mo(RV.r0);
+    const kept = mPlan() * 12 * RV.keep / 100;
+    $('rv-check').textContent = `At full speed the project keeps ${money(kept)} a year, against ${money(S.cf[4])} in your year 5` +
+      (RV.mSet === null ? '. The monthly revenue above is worked out from year 5; type a number to set your own.' : '.');
+
+    const sc = scenario(), f = sc.f, n = sc.n, h = sc.h;
+    const r = f ? F.irr(f) : null;
+    const tol = Math.max(1, sc.P.inv * 0.005);
     $('s-npv').textContent = money(n);
-    const d = n - base;
+    const d = n - todayBase;
     $('s-delta').textContent = Math.abs(d) < 0.5 ? '—' : sgn(d) + money(Math.abs(d));
     $('s-delta').style.color = d > 0.5 ? 'var(--clear)' : d < -0.5 ? 'var(--short)' : '';
-    $('s-irr').textContent = r === null || (f && signChanges(f) > 1) ? '—' : pct(r);
+    $('s-irr').textContent = r === null || (f && F.signChanges(f) > 1) ? '—' : pct(r);
     $('s-h').textContent = pct(h);
-    // payback with the scenario's cash and spend, timing shifted
-    let cum = -S.inv * o.inv, pb = null;
-    for (let i = 0; i < 5; i++) { const v = S.cf[i] * o.scale; if (cum + v >= 0 && v > 0) { pb = i + (-cum) / v + o.shift; break; } cum += v; }
-    $('s-pb').textContent = pb === null ? 'Not in 5 yrs' : Math.max(0, pb).toFixed(1) + ' yrs';
+    const pb = F.payback(sc.P.inv, sc.P.cf, 0);
+    $('s-pb').textContent = pb === null ? 'Not in 5 yrs' : Math.max(0, pb + sc.shift).toFixed(1) + ' yrs';
     const v = $('s-verdict');
     if (!f) { v.className = 'verdict even'; v.textContent = 'Check growth'; }
     else if (n > tol) { v.className = 'verdict clear'; v.textContent = 'Clears the bar'; }
     else if (n < -tol) { v.className = 'verdict short'; v.textContent = "Doesn't clear the bar on cash alone"; }
     else { v.className = 'verdict even'; v.textContent = 'Breaks even'; }
-    const moves = [];
-    if (LV.shift) moves.push(LV.shift < 0 ? `ship ${Math.abs(LV.shift)} months sooner` : `slip ${LV.shift} months`);
-    if (LV.scale) moves.push(`${LV.scale > 0 ? 'raise' : 'lose'} ${Math.abs(LV.scale)}% of yearly cash`);
-    if (LV.inv) moves.push(`${LV.inv < 0 ? 'cut' : 'add'} ${Math.abs(LV.inv)}% ${LV.inv < 0 ? 'from' : 'to'} the upfront spend`);
-    if (LV.bump) moves.push(LV.bump < 0 ? `show enough evidence to lower the bar ${Math.abs(LV.bump)} points` : `face a bar ${LV.bump} points higher`);
-    const list = moves.length > 1 ? moves.slice(0, -1).join(', ') + ' and ' + moves[moves.length - 1] : moves[0];
-    $('say2').textContent = !f ? 'Set growth after year 5 below the hurdle rate to see the summary.'
-      : !moves.length ? `Pull a lever to see what it does. Today the project ${base >= 0 ? 'creates' : 'falls short by'} ${money(Math.abs(base))} of value at our ${pct(hurdle())} hurdle rate.`
-      : `If we ${list}, the project's value goes from ${money(base)} to ${money(n)}${n > tol && base <= tol ? ', and it clears the bar' : n < -tol && base >= -tol ? ', and it no longer clears the bar' : ''}.`;
+
+    drawRamp(sc);
+    $('ramp-base-l').textContent = RV.mode === 'simple' ? 'Plan' : 'Onboarding as set up';
+    $('ramp-note').textContent = RV.mode === 'simple'
+      ? `Full speed: ${money(mPlan() * (1 + RV.lvl / 100))} a month, ${mo(RV.R)} after launch.`
+      : `${Math.round(RV.onb.P)} paying customers at ${money(RV.onb.A)} a month, reached ${mo(sc.fullAt)} after launch. Customers who start but don't finish still cost onboarding.`;
+
+    if (RV.mode === 'onboarding') {
+      if (!RV.extra) {
+        $('justify-lead').textContent = 'Enter the up-front cost of an onboarding change, such as automating setup, to see how much each improvement would need to deliver to pay for it. Each is tested on its own, from onboarding as set up.';
+        $('pays').replaceChildren();
+      } else {
+        const p = payFor();
+        const any = p.rows.some((x) => x.ok);
+        $('justify-lead').textContent = any
+          ? `To cover ${money(RV.extra)} up front, any one of these is enough on its own. Combined, each needs less.`
+          : `No single improvement covers ${money(RV.extra)} on its own. Here is the most each could be worth; a combination may still do it.`;
+        $('pays').replaceChildren(...p.rows.map((row) => {
+          const e = document.createElement('div');
+          e.className = 'pay' + (row.ok ? '' : ' no');
+          e.innerHTML = '<span class="t"></span><span class="r"></span><span class="d"></span>';
+          e.querySelector('.t').textContent = row.t;
+          e.querySelector('.r').textContent = row.r;
+          e.querySelector('.d').textContent = row.d;
+          return e;
+        }));
+      }
+    }
+    $('say2').textContent = sentence(sc, todayBase);
   }
-  ['shift', 'scale', 'inv', 'bump'].forEach((k) => {
-    $('lv-' + k).addEventListener('input', (e) => { LV[k] = parseFloat(e.target.value); render(); });
+
+  // ---------- step 4 inputs ----------
+  function syncInputs() {
+    $('lv-shift').value = LV.shift; $('lv-inv').value = LV.inv; $('lv-bump').value = LV.bump;
+    $('rv-r').value = RV.R; $('rv-r-n').value = RV.R; $('rv-lvl').value = RV.lvl;
+    $('rv-m').value = Math.round(mPlan()); $('rv-keep').value = RV.keep; $('rv-r0').value = RV.r0;
+    document.querySelectorAll('input[name="rv-mode"]').forEach((i) => { i.checked = i.value === RV.mode; });
+    if (RV.onb) {
+      const o = RV.onb;
+      [['n', 'N', 0.5], ['d', 'd', 0.5], ['c', 'c', 1], ['a', 'A', 10], ['k', 'K', 10]].forEach(([id, key]) => {
+        $('ob-' + id + '-n').value = key === 'N' ? round1(o[key]) : o[key];
+        const r = $('ob-' + id);
+        if (o[key] > +r.max) r.max = String(Math.ceil(o[key] * 2));
+        r.value = o[key];
+      });
+      $('ob-x').value = RV.extra; $('ob-p').value = Math.round(o.P);
+    }
+  }
+  const num = (id, fn) => $(id).addEventListener('input', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) { fn(v); render(); } });
+  ['shift', 'inv', 'bump'].forEach((k) => $('lv-' + k).addEventListener('input', (e) => { LV[k] = parseFloat(e.target.value); render(); }));
+  const setR = (v) => { RV.R = Math.max(1, Math.min(48, Math.round(v))); $('rv-r').value = RV.R; $('rv-r-n').value = RV.R; };
+  $('rv-r').addEventListener('input', (e) => { setR(+e.target.value); render(); });
+  num('rv-r-n', setR);
+  $('rv-lvl').addEventListener('input', (e) => { RV.lvl = parseFloat(e.target.value); render(); });
+  num('rv-m', (v) => { RV.mSet = Math.max(0, v); });
+  num('rv-keep', (v) => { RV.keep = Math.max(1, Math.min(100, v)); });
+  num('rv-r0', (v) => { const was = RV.R === RV.r0; RV.r0 = Math.max(1, Math.min(48, Math.round(v))); if (was) setR(RV.r0); });
+  [['n', 'N', 0.5, 1e6], ['d', 'd', 0, 12], ['c', 'c', 5, 100], ['a', 'A', 1, 1e6], ['k', 'K', 0, 1e6]].forEach(([id, key, lo, hi]) => {
+    const set = (v) => { RV.onb[key] = Math.max(lo, Math.min(hi, v)); syncInputs(); };
+    $('ob-' + id).addEventListener('input', (e) => { set(parseFloat(e.target.value)); render(); });
+    num('ob-' + id + '-n', set);
   });
+  num('ob-x', (v) => { RV.extra = Math.max(0, v); });
+  num('ob-p', (v) => { RV.onb.P = Math.max(1, v); });
+  document.querySelectorAll('input[name="rv-mode"]').forEach((i) => i.addEventListener('change', () => { setMode(i.value); render(); }));
   $('lv-reset').addEventListener('click', () => {
-    ['shift', 'scale', 'inv', 'bump'].forEach((k) => { LV[k] = 0; $('lv-' + k).value = 0; });
-    render();
+    Object.assign(LV, { shift: 0, inv: 0, bump: 0 });
+    Object.assign(RV, { R: RV.r0, lvl: 0, saved: null, note: '' });
+    if (RV.mode === 'onboarding') { RV.mode = 'simple'; setMode('onboarding'); }
+    syncInputs(); render();
   });
   $('copy2').addEventListener('click', async () => {
     const b = $('copy2'), text = $('say2').textContent;
@@ -606,6 +951,7 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
     }
     setTimeout(() => (b.textContent = 'Copy'), 1600);
   });
+  syncInputs();
 
   // ---------- render ----------
   function render() {
@@ -671,9 +1017,15 @@ input[type="range"] { width: 100%; accent-color: var(--brass); margin: 2px 0 0; 
     }
     $('say').textContent = say;
 
+    const today = npv();
+    $('base-npv').textContent = money(today);
+    renderScenario(today);
     const { base, L } = levers();
-    $('base-npv').textContent = money(base);
-    renderScenario(base);
+    $('tornado-base-l').textContent = RV.mode === 'simple' ? "Today's value" : 'Onboarding as set up';
+    $('tornado-title').textContent = RV.mode === 'simple' ? 'Which lever matters most' : 'Which assumption matters most';
+    $('tornado-help').textContent = RV.mode === 'simple'
+      ? "Each bar runs from the lever's downside case to its upside case, holding the others at plan."
+      : 'Each bar moves one assumption from where onboarding was set up, holding the others there. Wait, finishing share and onboarding cost are onboarding; starts a month is demand; price is price.';
     if (L.length) {
       drawTornado(base, L);
       const top = L[0];

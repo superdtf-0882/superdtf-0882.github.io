@@ -42,7 +42,11 @@ page is right.
   cost of equity) and the bar a project must clear (the weighted cost
   of capital, adjusted for the project's risk), to the project's
   value, its rate of return and its paybacks, then the levers that
-  move the answer most. Its figures are calculated in the browser from
+  move the answer most, with a choice of how revenue builds after
+  launch: a simple ramp to the planned level, or a model of customer
+  onboarding that shows which assumption matters most and how much an
+  onboarding change would need to improve to pay for itself. Its
+  figures are calculated in the browser from
   the visitor's own inputs, so a reader that does not execute
   JavaScript gets the explanations without the figures. Free to use;
   it stores and sends nothing.
